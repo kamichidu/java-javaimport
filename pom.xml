@@ -37,7 +37,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>jp.michikusa.chitose.unitejavaimport.Dumper</mainClass>
+                            <mainClass>jp.michikusa.chitose.unitejavaimport.cli.App</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

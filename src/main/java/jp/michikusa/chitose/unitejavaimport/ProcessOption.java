@@ -1,26 +1,60 @@
 package jp.michikusa.chitose.unitejavaimport;
 
-import com.google.common.collect.ImmutableCollection;
-import com.google.common.collect.ImmutableSet;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
 
-import javax.tools.JavaFileManager;
-import javax.tools.StandardLocation;
-
-import org.kohsuke.args4j.Option;
-
 /**
- * cli option class.
+ * this has some options for dumping.
  *
  * @author kamichidu
- * @since 2013-12-22
+ * @since  2013-12-22
  */
 public class ProcessOption
 {
-    public boolean helpFlag()
+    public static class Builder
     {
-        return this.help_flag;
+        public Builder recursive(boolean value)
+        {
+            this.recursive= value;
+            return this;
+        }
+
+        public Builder packageName(String value)
+        {
+            this.package_name= value;
+            return this;
+        }
+
+        public Builder path(File value)
+        {
+            this.path= value;
+            return this;
+        }
+
+        public Builder debug(boolean value)
+        {
+            this.debug= value;
+            return this;
+        }
+
+        public ProcessOption build()
+        {
+            return new ProcessOption(this);
+        }
+
+        private boolean recursive;
+
+        private String package_name;
+
+        private File path;
+
+        private boolean debug;
+    }
+
+    public static Builder builder()
+    {
+        return new Builder();
     }
 
     public boolean recursive()
@@ -35,40 +69,30 @@ public class ProcessOption
 
     public File path()
     {
-        return new File(this.path);
+        return this.path;
     }
 
-    public <T> T debug(T ref)
+    public boolean debug()
     {
-        if(this.debug)
-        {
-            System.err.println(ref);
-        }
-        return ref;
+        return this.debug;
     }
 
-    public <T> T debug(T ref, String message)
+    private ProcessOption(Builder builder)
     {
-        if(this.debug)
-        {
-            System.err.println(message + ": " + ref);
-        }
-        return ref;
+        checkNotNull(builder.path);
+
+        this.recursive=    builder.recursive;
+        this.package_name= builder.package_name;
+        this.path=         builder.path;
+        this.debug=        builder.debug;
     }
 
-    @Option(name= "-h", aliases= "--help", usage= "show this message")
-    private boolean help_flag= false;
+    private final boolean recursive;
 
-    @Option(name= "-r", aliases= "--recurse", usage= "dump packages recursively (default: not recursive)")
-    private boolean recursive= false;
+    private final String package_name;
 
-    @Option(name= "-P", aliases= "--package", usage= "dump packages via (default: '')")
-    private String package_name= "";
+    private final File path;
 
-    @Option(name= "-p", aliases= "--path", usage= "process target classpath")
-    private String path= "";
-
-    @Option(name= "--debug", usage= "debug mode")
-    private boolean debug= false;
+    private final boolean debug;
 }
 
