@@ -1,9 +1,16 @@
 package jp.michikusa.chitose.unitejavaimport.cli;
 
-import java.io.File;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
-import jp.michikusa.chitose.unitejavaimport.Dumper;
-import jp.michikusa.chitose.unitejavaimport.ProcessOption;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
+
+import jp.michikusa.chitose.unitejavaimport.cli.command.CommandParser;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -14,57 +21,151 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * an entry point for cli inerface.
  *
  * @author kamichidu
- * @since  2014-05-23
+ * @since 2014-05-23
  */
 public class App
 {
-    public static void main(String[] args)
+    public App(InputStream istream, OutputStream ostream, OutputStream estream)
     {
-        final CliOption option= new CliOption();
-        final CmdLineParser parser= new CmdLineParser(option);
-        try
-        {
-            parser.parseArgument(args);
-        }
-        catch(CmdLineException e)
-        {
-            e.printStackTrace();
-            return;
-        }
+        checkNotNull(istream);
+        checkNotNull(ostream);
+        checkNotNull(estream);
 
-        try
-        {
-            final ProcessOption proc_opts= ProcessOption.builder()
-                .packageName(option.packageName())
-                .recursive(option.recursive())
-                .path(ensureExists(option.path()))
-                .debug(option.debug())
-                .build()
-            ;
-            final Dumper dumper= new Dumper(proc_opts);
+        this.istream= istream;
+        this.ostream= ostream;
+        this.estream= estream;
+    }
 
-            for(final CharSequence clazzname : dumper.call())
+    public App(InputStream istream, OutputStream ostream)
+    {
+        this(istream, ostream, ostream);
+    }
+
+    public void start() throws IOException
+    {
+        final BufferedReader reader= new BufferedReader(new InputStreamReader(this.istream));
+
+        boolean alive= true;
+        while(alive)
+        {
+            this.ostream.write(" > ".getBytes());
+            final String line= reader.readLine();
+
+            if(line == null)
             {
-                System.out.println(clazzname);
+                break;
             }
-        }
-        catch(Exception e)
-        {
-            e.printStackTrace();
+
+            try
+            {
+                alive= this.processLine(line);
+            }
+            catch(Exception e)
+            {
+                e.printStackTrace(new PrintStream(this.estream));
+            }
         }
     }
 
-    private static File ensureExists(String path)
+    /**
+     * process line input
+     *
+     * @param input input string with a whole line
+     * @return indicating process status, true is alive, false is dead.
+     */
+    private boolean processLine(String input) throws IOException
     {
-        checkNotNull(path);
-
-        final File file= new File(path);
-
-        if(!file.exists())
+        final String command_name;
+        final ImmutableList<String> command_args;
         {
-            throw new IllegalArgumentException();
+            final ImmutableList<String> parts= this.parseCommand(input);
+
+            command_name= parts.get(0);
+            command_args= parts.subList(1, parts.size());
         }
 
-        return file;
+        final Command command= this.command_parser.findByName(command_name);
+
+        if(command == null)
+        {
+            this.estream.write("no such command".getBytes());
+            return true;
+        }
+
+        final Object option;
+        {
+            final Class<?> arg_clazz= command.argumentsClazz();
+
+            if(arg_clazz != null)
+            {
+                try
+                {
+                    option= arg_clazz.newInstance();
+                }
+                catch(Exception e)
+                {
+                    throw new AssertionError("it cannot instanciate: " + arg_clazz.getCanonicalName());
+                }
+            }
+            else
+            {
+                option= null;
+            }
+        }
+
+        final CmdLineParser parser= new CmdLineParser(option);
+        try
+        {
+            parser.parseArgument(command_args);
+        }
+        catch(CmdLineException e)
+        {
+            throw new IllegalArgumentException(e);
+        }
+
+        try
+        {
+            return command.exec(this.ostream, option);
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace(new PrintStream(this.estream));
+            return true;
+        }
+    }
+
+    private ImmutableList<String> parseCommand(String input)
+    {
+        return ImmutableList.copyOf(
+            Splitter.onPattern("\\s+")
+                .omitEmptyStrings()
+                .split(input)
+        );
+    }
+
+    /** input stream */
+    private final InputStream istream;
+
+    /** standard output stream */
+    private final OutputStream ostream;
+
+    /** error output stream */
+    private final OutputStream estream;
+
+    private final CommandParser command_parser= new CommandParser();
+
+    public static void main(String[] args)
+    {
+        final App app= new App(System.in, System.out, System.err);
+
+        try
+        {
+            app.start();
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+            System.exit(1);
+        }
     }
 }
