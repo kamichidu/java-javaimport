@@ -1,7 +1,9 @@
 package jp.michikusa.chitose.unitejavaimport.cli.command;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
+import static com.google.common.base.Predicates.alwaysTrue;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.collect.Iterables.filter;
+import static com.google.common.collect.Iterables.transform;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -20,12 +22,18 @@ import jp.michikusa.chitose.unitejavaimport.predicate.IsPublic;
 import org.apache.bcel.classfile.ClassFormatException;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import org.kohsuke.args4j.OptionDef;
+import org.kohsuke.args4j.spi.DelimitedOptionHandler;
+import org.kohsuke.args4j.spi.OneArgumentOptionHandler;
+import org.kohsuke.args4j.spi.Setter;
+import org.kohsuke.args4j.spi.StringOptionHandler;
 
-import static com.google.common.base.Predicates.alwaysTrue;
-import static com.google.common.base.Predicates.and;
-import static com.google.common.collect.Iterables.filter;
-import static com.google.common.collect.Iterables.transform;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 
 public class List implements Command
 {
@@ -33,6 +41,31 @@ public class List implements Command
     {
         @Option(name= "--public")
         boolean filter_public;
+
+        @Option(name= "--exclude_package", handler= StringSetOptionHandler.class, metaVar= "packagename+", usage= "specify exclude package names")
+        String[] exclude_packages= new String[0];
+    }
+
+    public static final class StringSetOptionHandler extends DelimitedOptionHandler<String>
+    {
+        public StringSetOptionHandler(CmdLineParser parser, OptionDef option, Setter<? super String> setter)
+        {
+            super(parser, option, setter, ",", new StringOneArgumentOptionHandler(parser, option, setter));
+        }
+    }
+
+    public static final class StringOneArgumentOptionHandler extends OneArgumentOptionHandler<String>
+    {
+        public StringOneArgumentOptionHandler(CmdLineParser parser, OptionDef option, Setter<? super String> setter)
+        {
+            super(parser, option, setter);
+        }
+
+        @Override
+        protected String parse(String argument) throws NumberFormatException, CmdLineException
+        {
+            return argument;
+        }
     }
 
     @Override
@@ -56,7 +89,7 @@ public class List implements Command
         final BufferedWriter writer= new BufferedWriter(new OutputStreamWriter(ostream));
         for(final File path : Repository.paths())
         {
-            for(final JavaClass clazz : filter(this.list(path), predicate))
+            for(final JavaClass clazz : filter(this.list(path, args), predicate))
             {
                 writer.write(clazz.getClassName());
                 writer.write(System.getProperty("line.separator"));
@@ -67,18 +100,58 @@ public class List implements Command
         return true;
     }
 
-    private Iterable<JavaClass> list(File path) throws IOException
+    private Iterable<JavaClass> list(File path, Arguments args) throws IOException
     {
-        final ZipFile zip_file= new ZipFile(path);
-        final Iterable<? extends ZipEntry> entries= filter(Collections.list(zip_file.entries()), new Predicate<ZipEntry>(){
+        Predicate<ZipEntry> predicate= new Predicate<ZipEntry>()
+        {
             @Override
             public boolean apply(ZipEntry input)
             {
                 return input.getName().endsWith(".class");
             }
-        });
+        };
 
-        return transform(entries, new Function<ZipEntry, JavaClass>(){
+        if(args.exclude_packages.length > 0)
+        {
+            final ImmutableSet<String> exclude_prefixes;
+            {
+                final ImmutableSet.Builder<String> builder= ImmutableSet.builder();
+
+                for(final String exclude_package : args.exclude_packages)
+                {
+                    // com.sun => com/sun/
+                    // com.sun. => error
+                    if(exclude_package.endsWith("."))
+                    {
+                        throw new IllegalArgumentException("package name cannot ends with '.'");
+                    }
+                    builder.add(exclude_package.replace('.', '/').concat("/"));
+                }
+
+                exclude_prefixes= builder.build();
+            }
+            predicate= and(predicate, new Predicate<ZipEntry>()
+            {
+                @Override
+                public boolean apply(ZipEntry input)
+                {
+                    for(final String prefix : exclude_prefixes)
+                    {
+                        if(input.getName().startsWith(prefix))
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            });
+        }
+
+        final ZipFile zip_file= new ZipFile(path);
+        final Iterable<? extends ZipEntry> entries= filter(Collections.list(zip_file.entries()), predicate);
+
+        return transform(entries, new Function<ZipEntry, JavaClass>()
+        {
             @Override
             public JavaClass apply(ZipEntry input)
             {
