@@ -40,6 +40,6 @@ public class CliOption
     @Option(name= "--debug", usage= "debug mode")
     private boolean debug= false;
 
-    @Option(name= "--ofile", usage= "output file, write to its file instead of stdout")
+    @Option(name= "--ofile", metaVar= "filename", usage= "output file, write to its file instead of stdout")
     private String ofilename;
 }
