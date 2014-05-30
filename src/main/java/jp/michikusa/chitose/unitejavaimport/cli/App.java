@@ -1,9 +1,11 @@
 package jp.michikusa.chitose.unitejavaimport.cli;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
+import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,30 +17,32 @@ import jp.michikusa.chitose.unitejavaimport.cli.command.CommandParser;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 /**
  * an entry point for cli inerface.
- *
+ * 
  * @author kamichidu
  * @since 2014-05-23
  */
 public class App
 {
-    public App(InputStream istream, OutputStream ostream, OutputStream estream)
+    public App(CliOption option, InputStream istream, OutputStream ostream, OutputStream estream)
     {
         checkNotNull(istream);
         checkNotNull(ostream);
         checkNotNull(estream);
 
+        this.option= firstNonNull(option, new CliOption());
         this.istream= istream;
         this.ostream= ostream;
         this.estream= estream;
     }
 
-    public App(InputStream istream, OutputStream ostream)
+    public App(CliOption option, InputStream istream, OutputStream ostream)
     {
-        this(istream, ostream, ostream);
+        this(option, istream, ostream, ostream);
     }
 
     public void start() throws IOException
@@ -69,8 +73,9 @@ public class App
 
     /**
      * process line input
-     *
-     * @param input input string with a whole line
+     * 
+     * @param input
+     *            input string with a whole line
      * @return indicating process status, true is alive, false is dead.
      */
     private boolean processLine(String input) throws IOException
@@ -123,25 +128,59 @@ public class App
             throw new IllegalArgumentException(e);
         }
 
+        OutputStream command_ostream= null;
         try
         {
-            return command.exec(this.ostream, option);
+            command_ostream= this.openOutputStreamForCommand();
+
+            return command.exec(command_ostream, option);
         }
         catch(Exception e)
         {
             e.printStackTrace(new PrintStream(this.estream));
             return true;
         }
+        finally
+        {
+            if(command_ostream != null)
+            {
+                command_ostream.flush();
+                try
+                {
+                    command_ostream.close();
+                }
+                catch(IOException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+    }
+
+    private OutputStream openOutputStreamForCommand() throws IOException
+    {
+        if(this.option.outputFile() == null)
+        {
+            return new FilterOutputStream(this.ostream)
+            {
+                @Override
+                public void close() throws IOException
+                {
+                }
+            };
+        }
+
+        // open new file for appending mode
+        return new FileOutputStream(this.option.outputFile(), true);
     }
 
     private ImmutableList<String> parseCommand(String input)
     {
-        return ImmutableList.copyOf(
-            Splitter.onPattern("\\s+")
-                .omitEmptyStrings()
-                .split(input)
-        );
+        return ImmutableList.copyOf(Splitter.onPattern("\\s+").omitEmptyStrings().split(input));
     }
+
+    /** command line option */
+    private final CliOption option;
 
     /** input stream */
     private final InputStream istream;
@@ -156,7 +195,26 @@ public class App
 
     public static void main(String[] args)
     {
-        final App app= new App(System.in, System.out, System.err);
+        final CliOption option= new CliOption();
+        try
+        {
+            final CmdLineParser parser= new CmdLineParser(option);
+
+            parser.parseArgument(args);
+
+            if(option.helpFlag())
+            {
+                parser.printUsage(System.out);
+                return;
+            }
+        }
+        catch(CmdLineException e)
+        {
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        final App app= new App(option, System.in, System.out, System.err);
 
         try
         {
