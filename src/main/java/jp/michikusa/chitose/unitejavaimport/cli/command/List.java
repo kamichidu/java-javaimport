@@ -29,7 +29,6 @@ import org.kohsuke.args4j.OptionDef;
 import org.kohsuke.args4j.spi.DelimitedOptionHandler;
 import org.kohsuke.args4j.spi.OneArgumentOptionHandler;
 import org.kohsuke.args4j.spi.Setter;
-import org.kohsuke.args4j.spi.StringOptionHandler;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;

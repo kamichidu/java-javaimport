@@ -1,6 +1,7 @@
 package jp.michikusa.chitose.unitejavaimport.cli.command;
 
-import com.google.common.base.Predicate;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.base.Predicates.not;
 
 import java.io.OutputStream;
 
@@ -10,15 +11,11 @@ import jp.michikusa.chitose.unitejavaimport.predicate.IsInitializer;
 import jp.michikusa.chitose.unitejavaimport.predicate.IsPublic;
 import jp.michikusa.chitose.unitejavaimport.predicate.IsStatic;
 
-import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
-import static com.google.common.base.Predicates.and;
-import static com.google.common.base.Predicates.not;
-import static com.google.common.collect.Iterables.filter;
-import static java.util.Arrays.asList;
+import com.google.common.base.Predicate;
 
 public class ShowMethod implements Command
 {
@@ -45,8 +42,6 @@ public class ShowMethod implements Command
     {
         final Arguments args= (Arguments)option;
 
-        final JavaClass clazz= Repository.getJavaClass(args.clazzname);
-
         Predicate<? super Method> predicate= and(not(new IsInitializer()), not(new IsInitializer()));
 
         if(args.filter_static)
@@ -58,7 +53,7 @@ public class ShowMethod implements Command
             predicate= and(predicate, new IsPublic());
         }
 
-        final Iterable<Method> methods= filter(asList(clazz.getMethods()), predicate);
+        final Iterable<Method> methods= Repository.getMethods(args.clazzname, predicate);
 
         for(final Method method : methods)
         {

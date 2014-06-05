@@ -1,10 +1,9 @@
 package jp.michikusa.chitose.unitejavaimport;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheBuilderSpec;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.Iterables.filter;
+import static java.util.Arrays.asList;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,10 +12,16 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.bcel.classfile.ClassParser;
+import org.apache.bcel.classfile.Field;
 import org.apache.bcel.classfile.JavaClass;
+import org.apache.bcel.classfile.Method;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.Predicate;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheBuilderSpec;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 public final class Repository
 {
@@ -47,7 +52,7 @@ public final class Repository
 
     /**
      * get {@link JavaClass} object.
-     *
+     * 
      * @param clazzname
      *            a canonical name of wanted class
      * @return {@link JavaClass} object
@@ -60,7 +65,8 @@ public final class Repository
 
         try
         {
-            return cache.get(clazzname, new Callable<JavaClass>(){
+            return cache.get(clazzname, new Callable<JavaClass>()
+            {
                 @Override
                 public JavaClass call() throws Exception
                 {
@@ -72,6 +78,20 @@ public final class Repository
         {
             throw new RuntimeException(e);
         }
+    }
+
+    public static Iterable<Method> getMethods(final String clazzname, Predicate<? super Method> predicate)
+    {
+        final JavaClass clazz= getJavaClass(clazzname);
+
+        return filter(asList(clazz.getMethods()), predicate);
+    }
+
+    public static Iterable<Field> getFields(String clazzname, Predicate<? super Field> predicate)
+    {
+        final JavaClass clazz= getJavaClass(clazzname);
+
+        return filter(asList(clazz.getFields()), predicate);
     }
 
     private static JavaClass tryParse(String clazzname) throws ClassNotFoundException, IOException
@@ -102,10 +122,7 @@ public final class Repository
         throw new AssertionError();
     }
 
-    private static final Cache<String, JavaClass> cache= CacheBuilder
-        .from(CacheBuilderSpec.disableCaching())
-        .build()
-    ;
+    private static final Cache<String, JavaClass> cache= CacheBuilder.from(CacheBuilderSpec.disableCaching()).build();
 
     private static final Set<File> paths= Sets.newConcurrentHashSet();
 }
