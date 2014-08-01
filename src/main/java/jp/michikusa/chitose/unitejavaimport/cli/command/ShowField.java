@@ -1,7 +1,6 @@
 package jp.michikusa.chitose.unitejavaimport.cli.command;
 
-import static com.google.common.base.Predicates.alwaysTrue;
-import static com.google.common.base.Predicates.and;
+import com.google.common.base.Predicate;
 
 import java.io.OutputStream;
 
@@ -14,7 +13,8 @@ import org.apache.bcel.classfile.Field;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
-import com.google.common.base.Predicate;
+import static com.google.common.base.Predicates.alwaysTrue;
+import static com.google.common.base.Predicates.and;
 
 public class ShowField implements Command
 {

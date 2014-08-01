@@ -1,12 +1,12 @@
 package jp.michikusa.chitose.unitejavaimport;
 
+import com.google.common.base.Predicate;
+
 import java.nio.file.Path;
 
 import org.apache.bcel.classfile.Field;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
-
-import com.google.common.base.Predicate;
 
 public abstract class Repository
 {

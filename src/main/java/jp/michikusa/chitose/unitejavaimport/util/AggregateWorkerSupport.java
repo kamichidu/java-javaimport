@@ -41,7 +41,7 @@ public final class AggregateWorkerSupport<T> implements TaskWorker<T>, WorkerSup
     public void addWorker(TaskWorker<? super T> worker)
     {
         final ImmutableList<TaskWorker<? super T>> workers= this.workers;
-        this.workers= ImmutableList.<TaskWorker<? super T>>builder() //
+        this.workers= ImmutableList.<TaskWorker<? super T>>builder()
                 .addAll(workers) //
                 .add(worker) //
                 .build() //

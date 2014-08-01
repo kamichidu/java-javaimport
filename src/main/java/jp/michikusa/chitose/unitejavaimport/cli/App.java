@@ -1,7 +1,7 @@
 package jp.michikusa.chitose.unitejavaimport.cli;
 
-import static com.google.common.base.Objects.firstNonNull;
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
@@ -17,11 +17,11 @@ import jp.michikusa.chitose.unitejavaimport.cli.command.CommandParser;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
+import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * an entry point for cli inerface.
+ * An entry point for cli inerface.
  * 
  * @author kamichidu
  * @since 2014-05-23
@@ -161,8 +161,7 @@ public class App
     {
         if(this.option.outputFile() == null)
         {
-            return new FilterOutputStream(this.ostream)
-            {
+            return new FilterOutputStream(this.ostream){
                 @Override
                 public void close() throws IOException
                 {

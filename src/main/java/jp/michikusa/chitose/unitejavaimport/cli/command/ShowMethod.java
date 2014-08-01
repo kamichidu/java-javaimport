@@ -1,7 +1,6 @@
 package jp.michikusa.chitose.unitejavaimport.cli.command;
 
-import static com.google.common.base.Predicates.and;
-import static com.google.common.base.Predicates.not;
+import com.google.common.base.Predicate;
 
 import java.io.OutputStream;
 
@@ -15,7 +14,8 @@ import org.apache.bcel.classfile.Method;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 
-import com.google.common.base.Predicate;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.base.Predicates.not;
 
 public class ShowMethod implements Command
 {

@@ -1,5 +1,13 @@
 package jp.michikusa.chitose.unitejavaimport;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Queues;
+import com.google.common.collect.UnmodifiableIterator;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -23,14 +31,6 @@ import org.apache.bcel.classfile.JavaClass;
 import org.apache.bcel.classfile.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Queues;
-import com.google.common.collect.UnmodifiableIterator;
 
 final class InMemoryRepository extends Repository
 {
@@ -159,8 +159,7 @@ final class InMemoryRepository extends Repository
         {
             try
             {
-                final File[] files= this.directory.toFile().listFiles(new FilenameFilter()
-                {
+                final File[] files= this.directory.toFile().listFiles(new FilenameFilter(){
                     @Override
                     public boolean accept(File dir, String name)
                     {
@@ -201,8 +200,7 @@ final class InMemoryRepository extends Repository
             try
             {
                 final JarFile jar= new JarFile(this.jarfile.toFile());
-                final Iterable<JarEntry> entries= Iterables.filter(Collections.list(jar.entries()), new Predicate<JarEntry>()
-                {
+                final Iterable<JarEntry> entries= Iterables.filter(Collections.list(jar.entries()), new Predicate<JarEntry>(){
                     @Override
                     public boolean apply(JarEntry input)
                     {
