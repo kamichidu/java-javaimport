@@ -46,27 +46,27 @@ public class Path implements Command
         {
             for(final File path : paths)
             {
-                Repository.addPath(path);
+//                Repository.addPath(path);
             }
         }
         else if(args.action.equals("rm"))
         {
             for(final File path : paths)
             {
-                Repository.removePath(path);
+//                Repository.removePath(path);
             }
         }
         else if(args.action.equals("show"))
         {
-            for(final File path : Repository.paths())
-            {
-                ostream.write(path.getAbsolutePath().getBytes());
-                ostream.write("\n".getBytes());
-            }
+//            for(final File path : Repository.paths())
+//            {
+//                ostream.write(path.getAbsolutePath().getBytes());
+//                ostream.write("\n".getBytes());
+//            }
         }
         else if(args.action.equals("clear"))
         {
-            Repository.clearPaths();
+//            Repository.clearPaths();
         }
         else
         {

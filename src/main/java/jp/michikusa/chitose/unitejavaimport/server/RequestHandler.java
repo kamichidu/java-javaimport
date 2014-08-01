@@ -49,8 +49,8 @@ public class RequestHandler extends IoHandlerAdapter
 
             try(final ByteArrayOutputStream ostream= new ByteArrayOutputStream())
             {
-                Repository.clearPaths();
-                Repository.addPath(path);
+//                Repository.clearPaths();
+//                Repository.addPath(path);
 
                 final List.Arguments args= new List.Arguments();
 

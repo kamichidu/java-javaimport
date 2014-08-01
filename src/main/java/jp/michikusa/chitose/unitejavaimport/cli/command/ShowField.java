@@ -52,13 +52,13 @@ public class ShowField implements Command
             predicate= and(predicate, new IsStatic());
         }
 
-        final Iterable<Field> fields= Repository.getFields(args.clazzname, predicate);
+//        final Iterable<Field> fields= Repository.getFields(args.clazzname, predicate);
 
-        for(final Field field : fields)
-        {
-            ostream.write(field.getName().getBytes());
-            ostream.write("\n".getBytes());
-        }
+//        for(final Field field : fields)
+//        {
+//            ostream.write(field.getName().getBytes());
+//            ostream.write("\n".getBytes());
+//        }
 
         return true;
     }

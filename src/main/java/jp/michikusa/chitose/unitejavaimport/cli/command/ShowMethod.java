@@ -53,13 +53,13 @@ public class ShowMethod implements Command
             predicate= and(predicate, new IsPublic());
         }
 
-        final Iterable<Method> methods= Repository.getMethods(args.clazzname, predicate);
-
-        for(final Method method : methods)
-        {
-            ostream.write(method.getName().getBytes());
-            ostream.write("\n".getBytes());
-        }
+//        final Iterable<Method> methods= Repository.getMethods(args.clazzname, predicate);
+//
+//        for(final Method method : methods)
+//        {
+//            ostream.write(method.getName().getBytes());
+//            ostream.write("\n".getBytes());
+//        }
 
         return true;
     }

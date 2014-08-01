@@ -18,6 +18,7 @@ import java.util.zip.ZipFile;
 import jp.michikusa.chitose.unitejavaimport.Repository;
 import jp.michikusa.chitose.unitejavaimport.cli.Command;
 import jp.michikusa.chitose.unitejavaimport.predicate.IsPublic;
+import lombok.Getter;
 
 import org.apache.bcel.classfile.ClassFormatException;
 import org.apache.bcel.classfile.ClassParser;
@@ -39,10 +40,14 @@ public class List implements Command
     public static final class Arguments
     {
         @Option(name= "--public")
-        boolean filter_public;
+        @Getter
+        @lombok.Setter
+        boolean filterPublic;
 
         @Option(name= "--exclude_package", handler= StringSetOptionHandler.class, metaVar= "packagename+", usage= "specify exclude package names")
-        String[] exclude_packages= new String[0];
+        @Getter
+        @lombok.Setter
+        String[] excludePackages= new String[0];
     }
 
     public static final class StringSetOptionHandler extends DelimitedOptionHandler<String>
@@ -80,20 +85,20 @@ public class List implements Command
 
         Predicate<? super JavaClass> predicate= alwaysTrue();
 
-        if(args.filter_public)
+        if(args.filterPublic)
         {
             predicate= and(predicate, new IsPublic());
         }
 
         final BufferedWriter writer= new BufferedWriter(new OutputStreamWriter(ostream));
-        for(final File path : Repository.paths())
-        {
-            for(final JavaClass clazz : filter(this.list(path, args), predicate))
-            {
-                writer.write(clazz.getClassName());
-                writer.write(System.getProperty("line.separator"));
-            }
-        }
+        // for(final File path : Repository.paths())
+        // {
+        // for(final JavaClass clazz : filter(this.list(path, args), predicate))
+        // {
+        // writer.write(clazz.getClassName());
+        // writer.write(System.getProperty("line.separator"));
+        // }
+        // }
         writer.flush();
 
         return true;
@@ -110,13 +115,13 @@ public class List implements Command
             }
         };
 
-        if(args.exclude_packages.length > 0)
+        if(args.excludePackages.length > 0)
         {
             final ImmutableSet<String> exclude_prefixes;
             {
                 final ImmutableSet.Builder<String> builder= ImmutableSet.builder();
 
-                for(final String exclude_package : args.exclude_packages)
+                for(final String exclude_package : args.excludePackages)
                 {
                     // com.sun => com/sun/
                     // com.sun. => error
