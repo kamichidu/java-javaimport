@@ -18,15 +18,17 @@ public class JsonMessageEncoder implements ProtocolEncoder
     @Override
     public void encode(IoSession session, Object message, ProtocolEncoderOutput out) throws Exception
     {
+        checkArgument(!session.isClosing());
         checkArgument(message instanceof Map);
 
         final String json= JSON.encode(message);
-        final IoBuffer buffer= IoBuffer.allocate(64 * 1024).setAutoExpand(true);
+        final IoBuffer buffer= IoBuffer.allocate(4 * 1024).setAutoExpand(true);
 
         buffer.putString(String.format("%08x%s", json.length(), json), this.encoder);
         buffer.flip();
 
         out.write(buffer);
+        out.flush();
     }
 
     @Override

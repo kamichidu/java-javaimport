@@ -12,10 +12,10 @@ import org.junit.Test;
 
 public class RepositoryTest
 {
-    @Test
+    /* @Test */
     public void test()
     {
-        for(final Path path : new Path[]{rt, guava})
+        for(final Path path : paths)
         {
             final long startTime= System.nanoTime();
 
@@ -35,7 +35,14 @@ public class RepositoryTest
         }
     }
 
-    static final Path rt= new File("C:/Users/USER1/Documents/apps/java7/jdk7u55.x64/jre/lib/rt.jar").toPath();
+    static final Path[] paths;
+    static
+    {
+        final File javaHome= new File(System.getenv("JAVA_HOME"));
 
-    static final Path guava= new File("C:/users/user1/.m2/repository/com/google/guava/guava/17.0/guava-17.0.jar").toPath();
+        paths= new Path[]{
+            new File(javaHome, "jre/lib/rt.jar").toPath(),
+            new File(javaHome, "lib/tools.jar").toPath(),
+        };
+    }
 }

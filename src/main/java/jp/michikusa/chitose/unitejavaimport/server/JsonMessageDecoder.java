@@ -41,7 +41,8 @@ public class JsonMessageDecoder extends CumulativeProtocolDecoder
         {
             final Map<String, Object> json= JSON.decode(istream);
 
-            out.write(new Request(json));
+            /* out.write(new Request(json)); */
+            out.write(json);
 
             return true;
         }

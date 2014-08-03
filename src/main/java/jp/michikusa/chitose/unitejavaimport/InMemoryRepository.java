@@ -1,10 +1,9 @@
 package jp.michikusa.chitose.unitejavaimport;
 
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Queues;
 import com.google.common.collect.UnmodifiableIterator;
 
@@ -14,13 +13,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import jp.michikusa.chitose.unitejavaimport.util.AbstractTaskWorker;
 import jp.michikusa.chitose.unitejavaimport.util.AggregateWorkerSupport;
 import jp.michikusa.chitose.unitejavaimport.util.TaskWorker;
 import jp.michikusa.chitose.unitejavaimport.util.WorkerSupport;
@@ -32,6 +35,10 @@ import org.apache.bcel.classfile.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.common.base.Predicates.alwaysTrue;
+import static com.google.common.collect.Iterables.filter;
+import static com.google.common.collect.Iterables.transform;
+
 final class InMemoryRepository extends Repository
 {
     @Override
@@ -40,11 +47,19 @@ final class InMemoryRepository extends Repository
         try
         {
             final Lister lister= this.newLister(classpath);
-            final JavaClassIterator itr= new JavaClassIterator(predicate);
+            final ConcurrentIterator<JavaClass> itr= new ConcurrentIterator<>(predicate);
+            final ExecutorService executor= Executors.newCachedThreadPool();
 
             lister.addWorker(itr);
+            lister.addWorker(new AbstractTaskWorker<Object>(){
+                @Override
+                public void endTask()
+                {
+                    executor.shutdown();
+                }
+            });
 
-            Executors.newCachedThreadPool().execute(lister);
+            executor.execute(lister);
 
             return itr;
         }
@@ -55,13 +70,13 @@ final class InMemoryRepository extends Repository
     }
 
     @Override
-    public ImmutableSet<Field> fields(Path classpath, Predicate<? super JavaClass> classPredicate, Predicate<? super Field> fieldPredicate)
+    public Iterable<Field> fields(Path classpath, Predicate<? super JavaClass> classPredicate, Predicate<? super Field> fieldPredicate)
     {
         final ImmutableSet.Builder<Field> fields= ImmutableSet.builder();
 
         for(final JavaClass clazz : this.classes(classpath, classPredicate))
         {
-            fields.addAll(Iterables.filter(ImmutableList.copyOf(clazz.getFields()), fieldPredicate));
+            fields.addAll(filter(ImmutableList.copyOf(clazz.getFields()), fieldPredicate));
         }
 
         return fields.build();
@@ -74,23 +89,41 @@ final class InMemoryRepository extends Repository
 
         for(final JavaClass clazz : this.classes(classpath, classPredicate))
         {
-            methods.addAll(Iterables.filter(ImmutableList.copyOf(clazz.getMethods()), methodPredicate));
+            methods.addAll(filter(ImmutableList.copyOf(clazz.getMethods()), methodPredicate));
         }
 
         return methods.build();
     }
 
     @Override
-    public ImmutableSet<String> packages(Path classpath)
+    public Iterable<String> packages(Path classpath)
     {
-        final ImmutableSet.Builder<String> packages= ImmutableSet.builder();
+        final Predicate<JavaClass> uniq= new Predicate<JavaClass>(){
+            @Override
+            public boolean apply(JavaClass input)
+            {
+                final String pkg= input.getPackageName();
 
-        for(final JavaClass clazz : this.classes(classpath, Predicates.alwaysTrue()))
-        {
-            packages.add(clazz.getPackageName());
-        }
+                if(this.s.contains(pkg))
+                {
+                    return false;
+                }
 
-        return packages.build();
+                this.s.add(pkg);
+
+                return this.s.contains(pkg);
+            }
+
+            private final Set<String> s= new HashSet<>();
+        };
+
+        return transform(this.classes(classpath, uniq), new Function<JavaClass, String>(){
+            @Override
+            public String apply(JavaClass input)
+            {
+                return input.getPackageName();
+            }
+        });
     }
 
     private Lister newLister(Path classpath)
@@ -200,7 +233,7 @@ final class InMemoryRepository extends Repository
             try
             {
                 final JarFile jar= new JarFile(this.jarfile.toFile());
-                final Iterable<JarEntry> entries= Iterables.filter(Collections.list(jar.entries()), new Predicate<JarEntry>(){
+                final Iterable<JarEntry> entries= filter(Collections.list(jar.entries()), new Predicate<JarEntry>(){
                     @Override
                     public boolean apply(JarEntry input)
                     {
@@ -225,15 +258,15 @@ final class InMemoryRepository extends Repository
         private final Path jarfile;
     }
 
-    private static class JavaClassIterator extends UnmodifiableIterator<JavaClass> implements TaskWorker<JavaClass>, Iterable<JavaClass>
+    private static class ConcurrentIterator<T> extends UnmodifiableIterator<T> implements TaskWorker<T>, Iterable<T>
     {
-        public JavaClassIterator(Predicate<? super JavaClass> predicate)
+        public ConcurrentIterator(Predicate<? super T> predicate)
         {
             this.predicate= predicate;
         }
 
         @Override
-        public Iterator<JavaClass> iterator()
+        public Iterator<T> iterator()
         {
             return this;
         }
@@ -257,7 +290,7 @@ final class InMemoryRepository extends Repository
         }
 
         @Override
-        public JavaClass next()
+        public T next()
         {
             return this.queue.poll();
         }
@@ -268,7 +301,7 @@ final class InMemoryRepository extends Repository
         }
 
         @Override
-        public void doTask(JavaClass o)
+        public void doTask(T o)
         {
             if(this.predicate.apply(o))
             {
@@ -282,9 +315,9 @@ final class InMemoryRepository extends Repository
             this.finish.set(true);
         }
 
-        private final Predicate<? super JavaClass> predicate;
+        private final Predicate<? super T> predicate;
 
-        private final ConcurrentLinkedQueue<JavaClass> queue= Queues.newConcurrentLinkedQueue();
+        private final ConcurrentLinkedQueue<T> queue= Queues.newConcurrentLinkedQueue();
 
         private final AtomicBoolean finish= new AtomicBoolean(false);
     }

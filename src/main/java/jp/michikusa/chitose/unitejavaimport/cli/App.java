@@ -11,8 +11,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.LinkedList;
+import java.util.List;
 
 import jp.michikusa.chitose.unitejavaimport.cli.command.CommandParser;
+import jp.michikusa.chitose.unitejavaimport.util.GenericOption;
+import jp.michikusa.chitose.unitejavaimport.util.KeepAliveOutputStream;
+import jp.michikusa.chitose.unitejavaimport.util.Pair;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -28,6 +33,40 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class App
 {
+    public static void main(String[] args)
+    {
+        final CliOption option= new CliOption();
+        try
+        {
+            final CmdLineParser parser= new CmdLineParser(option);
+
+            parser.parseArgument(args);
+
+            if(option.helpFlag())
+            {
+                parser.printUsage(System.out);
+                return;
+            }
+        }
+        catch(CmdLineException e)
+        {
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        final App app= new App(option, System.in, System.out, System.err);
+
+        try
+        {
+            app.start();
+        }
+        catch(IOException e)
+        {
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
+
     public App(CliOption option, InputStream istream, OutputStream ostream, OutputStream estream)
     {
         checkNotNull(istream);
@@ -80,16 +119,16 @@ public class App
      */
     private boolean processLine(String input) throws IOException
     {
-        final String command_name;
-        final ImmutableList<String> command_args;
+        final String commandName;
+        final String[][] commandArgs;
         {
-            final ImmutableList<String> parts= this.parseCommand(input);
+            final Pair<String, String[][]> parts= this.parseCommand(input);
 
-            command_name= parts.get(0);
-            command_args= parts.subList(1, parts.size());
+            commandName= parts.first();
+            commandArgs= parts.second();
         }
 
-        final Command command= this.command_parser.findByName(command_name);
+        final Command command= this.command_parser.findByName(commandName);
 
         if(command == null)
         {
@@ -97,63 +136,14 @@ public class App
             return true;
         }
 
-        final Object option;
+        try(final OutputStream out= this.openOutputStreamForCommand())
         {
-            final Class<?> arg_clazz= command.argumentsClazz();
-
-            if(arg_clazz != null)
-            {
-                try
-                {
-                    option= arg_clazz.newInstance();
-                }
-                catch(Exception e)
-                {
-                    throw new AssertionError("it cannot instanciate: " + arg_clazz.getCanonicalName());
-                }
-            }
-            else
-            {
-                option= null;
-            }
-        }
-
-        final CmdLineParser parser= new CmdLineParser(option);
-        try
-        {
-            parser.parseArgument(command_args);
-        }
-        catch(CmdLineException e)
-        {
-            throw new IllegalArgumentException(e);
-        }
-
-        OutputStream command_ostream= null;
-        try
-        {
-            command_ostream= this.openOutputStreamForCommand();
-
-            return command.exec(command_ostream, option);
+            return command.exec(out, new GenericOption(commandArgs));
         }
         catch(Exception e)
         {
             e.printStackTrace(new PrintStream(this.estream));
             return true;
-        }
-        finally
-        {
-            if(command_ostream != null)
-            {
-                command_ostream.flush();
-                try
-                {
-                    command_ostream.close();
-                }
-                catch(IOException e)
-                {
-                    throw new RuntimeException(e);
-                }
-            }
         }
     }
 
@@ -161,21 +151,43 @@ public class App
     {
         if(this.option.outputFile() == null)
         {
-            return new FilterOutputStream(this.ostream){
-                @Override
-                public void close() throws IOException
-                {
-                }
-            };
+            return new KeepAliveOutputStream(this.ostream);
         }
 
         // open new file for appending mode
         return new FileOutputStream(this.option.outputFile(), true);
     }
 
-    private ImmutableList<String> parseCommand(String input)
+    private Pair<String, String[][]> parseCommand(String input)
     {
-        return ImmutableList.copyOf(Splitter.onPattern("\\s+").omitEmptyStrings().split(input));
+        final String[] elements= input.split("(?:(?<!\\\\)\\s)+");
+
+        if(elements.length == 0)
+        {
+            return Pair.of(null, new String[0][0]);
+        }
+
+        final String first= elements[0];
+        final List<String[]> second= new LinkedList<>();
+
+        for(int i= 1; i < elements.length; ++i)
+        {
+            if(elements[i].startsWith("--"))
+            {
+                // option with value
+                if(i + 1 < elements.length && !elements[i + 1].startsWith("--"))
+                {
+                    second.add(new String[]{elements[i], elements[i + 1]});
+                }
+                // flag option
+                else
+                {
+                    second.add(new String[]{elements[i]});
+                }
+            }
+        }
+
+        return Pair.of(first, second.toArray(new String[0][0]));
     }
 
     /** command line option */
@@ -191,38 +203,4 @@ public class App
     private final OutputStream estream;
 
     private final CommandParser command_parser= new CommandParser();
-
-    public static void main(String[] args)
-    {
-        final CliOption option= new CliOption();
-        try
-        {
-            final CmdLineParser parser= new CmdLineParser(option);
-
-            parser.parseArgument(args);
-
-            if(option.helpFlag())
-            {
-                parser.printUsage(System.out);
-                return;
-            }
-        }
-        catch(CmdLineException e)
-        {
-            e.printStackTrace();
-            System.exit(1);
-        }
-
-        final App app= new App(option, System.in, System.out, System.err);
-
-        try
-        {
-            app.start();
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-            System.exit(1);
-        }
-    }
 }
