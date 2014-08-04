@@ -159,7 +159,26 @@ public class RequestHandler extends IoHandlerAdapter
                 break;
             }
             case "methods":
+                break;
             case "fields":
+                break;
+            case "quit":{
+                new Thread(){
+                    @Override
+                    public void run()
+                    {
+                        logger.info("terminating server...");
+                        try
+                        {
+                            Thread.sleep(1000);
+                        }
+                        catch(InterruptedException e){}
+
+                        System.exit(0);
+                    }
+                }.start();
+                break;
+            }
         }
     }
 
