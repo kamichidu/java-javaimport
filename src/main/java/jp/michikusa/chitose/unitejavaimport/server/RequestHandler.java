@@ -190,9 +190,9 @@ public class RequestHandler extends IoHandlerAdapter
         switch(type)
         {
             case "inclusive":
-                return new RegexMatch(Pattern.compile(pattern), stringify);
+                return new RegexMatch<E>(Pattern.compile(pattern), stringify);
             case "exclusive":
-                return not(new RegexMatch(Pattern.compile(pattern), stringify));
+                return not(new RegexMatch<E>(Pattern.compile(pattern), stringify));
             default:
                 throw new IllegalArgumentException("Malformed Regex Object");
         }
