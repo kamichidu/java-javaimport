@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 public class RegexMatch<E> implements Predicate<E>
 {
-    public RegexMatch(Pattern pattern, Function<? super E, String> stringify)
+    public RegexMatch(Pattern pattern, Function<? super E, ? extends String> stringify)
     {
         this.pattern= pattern;
         this.stringify= stringify;
@@ -19,7 +19,7 @@ public class RegexMatch<E> implements Predicate<E>
         return this.pattern.matcher(this.stringify.apply(input)).find();
     }
 
-    private final Function<? super E, String> stringify;
+    private final Function<? super E, ? extends String> stringify;
 
     private final Pattern pattern;
 }
