@@ -21,7 +21,7 @@ public abstract class Repository
 
     public abstract Iterable<Method> methods(Path classpath, Predicate<? super JavaClass> classPredicate, Predicate<? super Method> methodPredicate);
 
-    public abstract Iterable<String> packages(Path classpath);
+    public abstract Iterable<String> packages(Path classpath, Predicate<? super String> predicate);
 
     private static final Repository instance= new InMemoryRepository();
 }

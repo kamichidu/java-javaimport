@@ -127,7 +127,7 @@ final class DatabaseRepository extends Repository
     }
 
     @Override
-    public ImmutableSet<String> packages(Path classpath)
+    public ImmutableSet<String> packages(Path classpath, Predicate<? super String> predicate)
     {
         final ImmutableSet<JavaClass> classes= this.classes(classpath, Predicates.alwaysTrue());
 

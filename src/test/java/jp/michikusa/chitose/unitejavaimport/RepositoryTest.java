@@ -1,18 +1,17 @@
 package jp.michikusa.chitose.unitejavaimport;
 
+import static com.google.common.base.Predicates.alwaysTrue;
+
 import java.io.File;
 import java.nio.file.Path;
 import java.text.NumberFormat;
 import java.util.concurrent.TimeUnit;
 
-import jp.michikusa.chitose.unitejavaimport.predicate.IsPublic;
-
-import org.apache.bcel.classfile.JavaClass;
 import org.junit.Test;
 
 public class RepositoryTest
 {
-    /* @Test */
+    @Test
     public void test()
     {
         for(final Path path : paths)
@@ -21,7 +20,7 @@ public class RepositoryTest
 
             final Repository repo= Repository.get();
 
-            for(final String pkg : repo.packages(path))
+            for(final String pkg : repo.packages(path, alwaysTrue()))
             {
                 System.out.println(pkg);
                 System.out.flush();

@@ -66,7 +66,7 @@ public class RequestHandler extends IoHandlerAdapter
 
                 for(final String path : paths)
                 {
-                    for(final String pkg : Repository.get().packages(new File(path).toPath()))
+                    for(final String pkg : Repository.get().packages(new File(path).toPath(), alwaysTrue()))
                     {
                         pkgs.add(pkg);
 

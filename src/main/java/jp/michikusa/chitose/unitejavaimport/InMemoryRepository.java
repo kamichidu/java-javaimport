@@ -36,6 +36,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Predicates.alwaysTrue;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.base.Predicates.compose;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.transform;
 
@@ -96,7 +98,7 @@ final class InMemoryRepository extends Repository
     }
 
     @Override
-    public Iterable<String> packages(Path classpath)
+    public Iterable<String> packages(Path classpath, Predicate<? super String> predicate)
     {
         final Predicate<JavaClass> uniq= new Predicate<JavaClass>(){
             @Override
@@ -116,14 +118,15 @@ final class InMemoryRepository extends Repository
 
             private final Set<String> s= new HashSet<>();
         };
-
-        return transform(this.classes(classpath, uniq), new Function<JavaClass, String>(){
+        final Function<JavaClass, String> transformer= new Function<JavaClass, String>(){
             @Override
             public String apply(JavaClass input)
             {
                 return input.getPackageName();
             }
-        });
+        };
+
+        return transform(this.classes(classpath, and(uniq, compose(predicate, transformer))), transformer);
     }
 
     private Lister newLister(Path classpath)
