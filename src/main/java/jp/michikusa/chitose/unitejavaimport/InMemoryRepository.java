@@ -279,14 +279,7 @@ final class InMemoryRepository extends Repository
         {
             while( !this.finish.get() && this.queue.isEmpty())
             {
-                try
-                {
-                    Thread.sleep(0);
-                }
-                catch(InterruptedException e)
-                {
-                    throw new RuntimeException(e);
-                }
+                Thread.yield();
             }
 
             return !this.queue.isEmpty();
