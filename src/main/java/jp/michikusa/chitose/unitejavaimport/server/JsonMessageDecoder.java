@@ -6,6 +6,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
 
+import jp.michikusa.chitose.unitejavaimport.server.request.CommonRequest;
+
 import net.arnx.jsonic.JSON;
 import net.arnx.jsonic.JSONException;
 
@@ -41,8 +43,7 @@ public class JsonMessageDecoder extends CumulativeProtocolDecoder
         {
             final Map<String, Object> json= JSON.decode(istream);
 
-            /* out.write(new Request(json)); */
-            out.write(json);
+            out.write(new CommonRequest(json));
 
             return true;
         }

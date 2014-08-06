@@ -1,28 +1,31 @@
 package jp.michikusa.chitose.unitejavaimport.server.request;
 
+import static com.google.common.base.Objects.firstNonNull;
+import static com.google.common.base.Strings.nullToEmpty;
+
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import lombok.Getter;
-
-import com.google.common.collect.ImmutableMap;
 
 public class CommonRequest
 {
     public CommonRequest(Map<String, ? extends Object> m)
     {
-        this.original= ImmutableMap.copyOf(m);
+        this.original= new HashMap<>(m);
 
-        this.identifier= (String)m.get("identifier");
-        this.command= (String)m.get("command");
+        this.identifier= nullToEmpty((String)m.get("identifier"));
+        this.command= nullToEmpty((String)m.get("command"));
         {
             @SuppressWarnings("unchecked")
             final Iterable<String> paths= (Iterable<String>)m.get("classpath");
 
-            this.paths= paths;
+            this.paths= firstNonNull(paths, Collections.<String>emptyList());
         }
     }
 
-    final ImmutableMap<String, Object> original;
+    final Map<String, Object> original;
 
     @Getter
     private final String identifier;

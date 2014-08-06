@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +29,34 @@ public class CommonRequestTest
         assertEquals(raw.get("identifier"), request.getIdentifier());
         assertEquals(raw.get("command"), request.getCommand());
         assertEquals(raw.get("classpath"), request.getPaths());
+    }
+
+    @Test
+    public void nullHandling()
+    {
+        final Map<String, Object> raw= new HashMap<>();
+
+        raw.put("identifier", null);
+        raw.put("command", null);
+        raw.put("classpath", null);
+
+        final CommonRequest request= new CommonRequest(raw);
+
+        assertEquals("", request.getIdentifier());
+        assertEquals("", request.getCommand());
+
+        assertTrue(request.getPaths() instanceof Iterable);
+    }
+
+    @Test
+    public void noPassed()
+    {
+        final CommonRequest request= new CommonRequest(Collections.<String, Object>emptyMap());
+        
+        assertEquals("", request.getIdentifier());
+        assertEquals("", request.getCommand());
+
+        assertTrue(request.getPaths() instanceof Iterable);
     }
 
     @Test

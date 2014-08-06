@@ -21,6 +21,7 @@ import jp.michikusa.chitose.unitejavaimport.server.request.CommonRequest;
 import jp.michikusa.chitose.unitejavaimport.server.request.PredicateRequest;
 
 import org.apache.bcel.classfile.JavaClass;
+import org.apache.bcel.classfile.Method;
 import org.apache.mina.core.service.IoHandlerAdapter;
 import org.apache.mina.core.session.IoSession;
 import org.slf4j.Logger;
@@ -46,7 +47,7 @@ public class RequestHandler extends IoHandlerAdapter
     @Override
     public void messageReceived(IoSession session, Object message)
     {
-        checkArgument(message instanceof CommonRequest);
+        checkArgument(message instanceof CommonRequest, "a message is not a " + CommonRequest.class);
 
         final CommonRequest request= (CommonRequest)message;
 
