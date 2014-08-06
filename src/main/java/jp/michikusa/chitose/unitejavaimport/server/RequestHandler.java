@@ -6,6 +6,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -14,8 +15,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import jp.michikusa.chitose.unitejavaimport.Repository;
-import jp.michikusa.chitose.unitejavaimport.predicate.RegexMatch;
 import jp.michikusa.chitose.unitejavaimport.predicate.IsPublic;
+import jp.michikusa.chitose.unitejavaimport.predicate.RegexMatch;
 import jp.michikusa.chitose.unitejavaimport.predicate.StartsWithPackage;
 import jp.michikusa.chitose.unitejavaimport.server.request.CommonRequest;
 import jp.michikusa.chitose.unitejavaimport.server.request.PredicateRequest;
@@ -59,8 +60,10 @@ public class RequestHandler extends IoHandlerAdapter
 
                 for(final String path : request.getPaths())
                 {
+                    logger.info("listing packages from {}", path);
                     for(final String pkg : Repository.get().packages(new File(path).toPath(), predicateRequest.getPackagePredicate()))
                     {
+                        logger.info("found a package {}", pkg);
                         pkgs.add(pkg);
 
                         if(pkgs.size() >= MAX_RESULT_SIZE)
@@ -138,6 +141,10 @@ public class RequestHandler extends IoHandlerAdapter
                 }.start();
                 break;
             }
+            default:{
+                session.write(makeErrorResponse(request.getIdentifier(), "unknown command `" + request.getCommand() + "'"));
+                break;
+            }
         }
     }
 
@@ -153,6 +160,18 @@ public class RequestHandler extends IoHandlerAdapter
         response.put("identifier", identifier);
         response.put("status", status);
         response.put("result", result);
+
+        return response;
+    }
+
+    private static Map<String, Object> makeErrorResponse(String identifier, String message)
+    {
+        final Map<String, Object> response= newHashMap();
+
+        response.put("identifier", identifier);
+        response.put("status", "error");
+        response.put("result", Collections.emptyList());
+        response.put("error", message);
 
         return response;
     }

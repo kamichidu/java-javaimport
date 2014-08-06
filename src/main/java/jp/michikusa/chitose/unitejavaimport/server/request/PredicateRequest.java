@@ -146,17 +146,17 @@ public class PredicateRequest
             for(final String pkg : pkgs)
             {
                 logger.info("will exclude package {}", pkg);
-                exclude= and(exclude, not(new Predicate<String>(){
+                exclude= or(exclude, new Predicate<String>(){
                     @Override
                     public boolean apply(String input)
                     {
                         return input.startsWith(pkg);
                     }
-                }));
+                });
             }
         }
 
-        return or(include, exclude);
+        return or(include, not(exclude));
     }
 
     private static <E>Predicate<E> makeRegex(Map<? super String, ? extends String> regex, Function<E, ? extends String> stringify)

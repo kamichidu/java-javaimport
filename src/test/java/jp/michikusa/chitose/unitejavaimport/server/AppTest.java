@@ -1,9 +1,6 @@
 package jp.michikusa.chitose.unitejavaimport.server;
 
-import static com.google.common.collect.Iterables.isEmpty;
-import static java.util.Collections.emptyList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.Iterables;
 
 import java.io.EOFException;
 import java.io.File;
@@ -20,6 +17,13 @@ import net.arnx.jsonic.JSON;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static com.google.common.collect.Iterables.isEmpty;
+
+import static java.util.Collections.emptyList;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class AppTest
 {
@@ -39,7 +43,7 @@ public class AppTest
     {
     }
 
-    @Test(expected= EOFException.class)
+    @Test
     public void missingIdentifier() throws Exception
     {
         try(final TestSocket socket= new TestSocket())
@@ -51,8 +55,16 @@ public class AppTest
 
             socket.write(request);
 
-            @SuppressWarnings("unused")
             final Map<String, Object> response= socket.read();
+
+            assertEquals("", response.get("identifier"));
+            assertTrue(response.get("result") instanceof Iterable);
+
+            final Iterable<?> result= (Iterable<?>)response.get("result");
+
+            assertTrue(isEmpty(result));
+
+            assertEquals("finish", response.get("status"));
         }
     }
 
@@ -70,15 +82,14 @@ public class AppTest
 
             final Map<String, Object> response= socket.read();
 
-            assertEquals(response.get("identifier"), "hoge");
+            assertEquals("hoge", response.get("identifier"));
             assertTrue(response.get("result") instanceof Iterable);
 
             final Iterable<?> result= (Iterable<?>)response.get("result");
 
             assertTrue(isEmpty(result));
 
-            assertEquals(response.get("status"), "error");
-            assertTrue(response.containsKey("error"));
+            assertEquals("finish", response.get("status"));
         }
     }
 
@@ -96,14 +107,14 @@ public class AppTest
 
             final Map<String, Object> response= socket.read();
 
-            assertEquals(response.get("identifier"), "hoge");
+            assertEquals("hoge", response.get("identifier"));
             assertTrue(response.get("result") instanceof Iterable);
 
             final Iterable<?> result= (Iterable<?>)response.get("result");
 
             assertTrue(isEmpty(result));
 
-            assertEquals(response.get("status"), "error");
+            assertEquals("error", response.get("status"));
             assertTrue(response.containsKey("error"));
         }
     }
@@ -125,13 +136,19 @@ public class AppTest
 
             final Map<String, Object> response= socket.read();
 
-            System.out.println(response);
+            assertEquals("hoge", response.get("identifier"));
+            assertEquals("finish", response.get("status"));
+
+            final Iterable<?> result= (Iterable<?>)response.get("result");
+
+            assertTrue("listed packages are " + Iterables.toString(result), !isEmpty(result));
         }
     }
 
     static final class TestSocket extends Socket
     {
         public static final String HOST_NAME= "localhost";
+
         public static final int PORT_NUMBER= 51235;
 
         public TestSocket() throws IOException
