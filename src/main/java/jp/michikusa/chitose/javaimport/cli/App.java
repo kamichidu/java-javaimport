@@ -4,9 +4,12 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Sets;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -127,26 +130,14 @@ public class App
         @Override
         public void run()
         {
-            JsonGenerator g= null;
             try
             {
-                g= new JsonFactory().createGenerator(new FilterOutputStream(System.out){
-                    @Override
-                    public void close()
-                        throws IOException
-                    {
-                    }
-                });
-                g.setPrettyPrinter(new DefaultPrettyPrinter());
-
                 if(!this.outputDir.exists())
                 {
                     this.outputDir.mkdirs();
                 }
 
-                g.writeStartArray();
-
-                final Iterable<JarEntry> entries= filter(Collections.list(this.jar.entries()), new Predicate<JarEntry>(){
+                final ImmutableMultimap<String, JarEntry> entries= this.splitEntries(filter(Collections.list(this.jar.entries()), new Predicate<JarEntry>(){
                     @Override
                     public boolean apply(JarEntry input)
                     {
@@ -164,7 +155,67 @@ public class App
                         }
                         return true;
                     }
+                }));
+                for(final String pkg : entries.keySet())
+                {
+                    FileOutputStream out= null;
+                    try
+                    {
+                        final File outfile= new File(this.outputDir, pkg);
+
+                        if(!outfile.exists())
+                        {
+                            outfile.createNewFile();
+                        }
+
+                        out= new FileOutputStream(outfile);
+
+                        this.writeClasses(out, jar, entries.get(pkg));
+                    }
+                    finally
+                    {
+                        if(out != null)
+                        {
+                            out.close();
+                        }
+                    }
+                }
+            }
+            catch(IOException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+
+        private ImmutableMultimap<String, JarEntry> splitEntries(Iterable<? extends JarEntry> entries)
+        {
+            final ImmutableMultimap.Builder<String, JarEntry> builder= ImmutableMultimap.builder();
+
+            for(final JarEntry entry : entries)
+            {
+                final File filename= new File(entry.getName());
+                builder.put(filename.getParent().replace('/', '.'), entry);
+            }
+
+            return builder.build();
+        }
+
+        private void writeClasses(OutputStream out, JarFile jar, Iterable<? extends JarEntry> entries)
+            throws IOException
+        {
+            JsonGenerator g= null;
+            try
+            {
+                g= new JsonFactory().createGenerator(new FilterOutputStream(out){
+                    @Override
+                    public void close()
+                        throws IOException
+                    {
+                    }
                 });
+                /* g.setPrettyPrinter(new DefaultPrettyPrinter()); */
+
+                g.writeStartArray();
                 for(final JarEntry entry : entries)
                 {
                     logger.debug("Reading `{}'.", entry.getName());
@@ -183,41 +234,6 @@ public class App
                             in.close();
                         }
                     }
-                }
-
-                g.writeEndArray();
-            }
-            catch(IOException e)
-            {
-                throw new RuntimeException(e);
-            }
-            finally
-            {
-                if(g != null)
-                {
-                    try
-                    {
-                        g.close();
-                    }
-                    catch(IOException e){
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-        }
-
-        private void writeClasses(OutputStream out, Iterable<? extends InputStream> inputs)
-            throws IOException
-        {
-            JsonGenerator g= null;
-            try
-            {
-                g= new JsonFactory().createGenerator(out);
-
-                g.writeStartArray();
-                for(final InputStream in : inputs)
-                {
-                    this.emmitClassInfo(g, in);
                 }
                 g.writeEndArray();
             }
