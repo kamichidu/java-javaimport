@@ -16,6 +16,7 @@ import java.util.jar.JarFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.common.base.Predicates.*;
 import static com.google.common.collect.Iterables.*;
 
 public class PackageInfoAnalyzer
@@ -34,21 +35,10 @@ public class PackageInfoAnalyzer
         final Closer closer= Closer.create();
         try
         {
-            final Iterable<CharSequence> pkgs= transform(Collections.list(this.jar.entries()), new Function<JarEntry, CharSequence>(){
-                @Override
-                public CharSequence apply(JarEntry input)
-                {
-                    final File file= new File(input.getName());
-                    if(file.getParent() != null)
-                    {
-                        return file.getParent().replace('/', '.');
-                    }
-                    else
-                    {
-                        return "";
-                    }
-                }
-            });
+            final Iterable<CharSequence> pkgs= filter(
+                transform(Collections.list(this.jar.entries()), new JarEntryToPackageName()),
+                not(containsPattern("^META-INF"))
+            );
             final File outfile= new File(this.outputDir, "packages");
             final FileOutputStream out= closer.register(new FileOutputStream(outfile));
             final JsonGenerator g= closer.register(new JsonFactory().createGenerator(out));
@@ -76,6 +66,24 @@ public class PackageInfoAnalyzer
             catch(IOException e)
             {
                 throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private static class JarEntryToPackageName
+        implements Function<JarEntry, CharSequence>
+    {
+        @Override
+        public CharSequence apply(JarEntry input)
+        {
+            final File file= new File(input.getName());
+            if(file.getParent() != null)
+            {
+                return file.getParent().replace('/', '.');
+            }
+            else
+            {
+                return "";
             }
         }
     }

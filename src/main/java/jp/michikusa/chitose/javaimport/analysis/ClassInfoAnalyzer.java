@@ -71,7 +71,8 @@ public class ClassInfoAnalyzer
                         // filter anonymouse class
                         return !Pattern.compile("\\$\\d+\\.class$").matcher(name).find();
                     }
-                    return true;
+                    // filter `package-info'
+                    return !Pattern.compile("\\b(?:package-info)\\b").matcher(name).find();
                 }
             }));
             final List<Future<?>> tasks= new ArrayList<Future<?>>(entries.keySet().size());
