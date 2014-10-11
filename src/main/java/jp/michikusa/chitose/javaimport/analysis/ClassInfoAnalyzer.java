@@ -238,6 +238,15 @@ public class ClassInfoAnalyzer
                 this.g.writeBooleanField("is_enum", (access & Opcodes.ACC_ENUM) == Opcodes.ACC_ENUM);
                 this.g.writeBooleanField("is_interface", (access & Opcodes.ACC_INTERFACE) == Opcodes.ACC_INTERFACE);
                 this.g.writeBooleanField("is_annotation", (access & Opcodes.ACC_ANNOTATION) == Opcodes.ACC_ANNOTATION);
+                this.g.writeArrayFieldStart("modifiers");
+                {
+                    if((access & Opcodes.ACC_PUBLIC)    == Opcodes.ACC_PUBLIC)   { this.g.writeString("public"); }
+                    if((access & Opcodes.ACC_PROTECTED) == Opcodes.ACC_PROTECTED){ this.g.writeString("protected"); }
+                    if((access & Opcodes.ACC_PRIVATE)   == Opcodes.ACC_PRIVATE)  { this.g.writeString("private"); }
+                    if((access & Opcodes.ACC_FINAL)     == Opcodes.ACC_FINAL)    { this.g.writeString("final"); }
+                    if((access & Opcodes.ACC_ABSTRACT)  == Opcodes.ACC_ABSTRACT) { this.g.writeString("abstract"); }
+                }
+                this.g.writeEndArray();
                 this.g.writeArrayFieldStart("interfaces");
                 for(final String cname : interfaces)
                 {
