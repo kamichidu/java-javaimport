@@ -3,9 +3,15 @@ package jp.michikusa.chitose.javaimport.cli;
 import java.io.File;
 import java.io.IOException;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import jp.michikusa.chitose.javaimport.analysis.ClassInfoAnalyzer;
+import jp.michikusa.chitose.javaimport.analysis.PackageInfoAnalyzer;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -17,6 +23,8 @@ import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.google.common.collect.Iterables.*;
 
 import static java.util.Arrays.asList;
 
@@ -65,20 +73,8 @@ public class App
             logger.info("--datadir=`{}'", option.getDataDir());
             logger.info("--jarpaths=`{}'", option.getJarpaths());
             logger.info("}");
-
             final long startTime= System.nanoTime();
-            for(final File jarpath : option.getJarpaths())
-            {
-                try
-                {
-                    logger.info("Analyze {}", jarpath);
-                    new ClassInfoAnalyzer(option.getDataDir(), jarpath).run();
-                }
-                catch(IOException e)
-                {
-                    logger.error("An exception occured during analyzing.", e);
-                }
-            }
+            new App(option).start();
             final long endTime= System.nanoTime();
             System.out.format("time required: %s [ms]",
                 NumberFormat.getNumberInstance().format(TimeUnit.NANOSECONDS.toMillis(endTime - startTime))
@@ -95,5 +91,49 @@ public class App
         }
     }
 
+    public App(AppOption option)
+    {
+        this.option= option;
+    }
+
+    public void start()
+    {
+        final ExecutorService service= Executors.newCachedThreadPool();
+        try
+        {
+            final List<Future<?>> tasks= new ArrayList<Future<?>>(size(this.option.getJarpaths()));
+            for(final File jarpath : this.option.getJarpaths())
+            {
+                try
+                {
+                    logger.info("Push Analysis task for {}", jarpath);
+                    tasks.add(service.submit(new PackageInfoAnalyzer(this.option.getDataDir(), jarpath)));
+                    tasks.add(service.submit(new ClassInfoAnalyzer(this.option.getDataDir(), jarpath)));
+                }
+                catch(IOException e)
+                {
+                    logger.error("An exception occured during analyzing.", e);
+                }
+            }
+            // stop tasking
+            service.shutdown();
+            // wait for task
+            for(final Future<?> task : tasks)
+            {
+                task.get();
+            }
+        }
+        catch(Exception e)
+        {
+            logger.error("An exception occured during some task", e);
+        }
+        finally
+        {
+            service.shutdownNow();
+        }
+    }
+
     private static final Logger logger= LoggerFactory.getLogger(App.class);
+
+    private final AppOption option;
 }

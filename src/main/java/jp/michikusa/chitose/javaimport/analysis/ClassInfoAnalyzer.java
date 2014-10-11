@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.io.Closer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -12,7 +13,12 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -40,6 +46,8 @@ public class ClassInfoAnalyzer
     @Override
     public void run()
     {
+        final ExecutorService service= Executors.newCachedThreadPool();
+        final Closer closer= Closer.create();
         try
         {
             if(!this.outputDir.exists())
@@ -66,34 +74,47 @@ public class ClassInfoAnalyzer
                     return true;
                 }
             }));
+            final List<Future<?>> tasks= new ArrayList<Future<?>>(entries.keySet().size());
             for(final String pkg : entries.keySet())
             {
-                FileOutputStream out= null;
-                try
+                final File outfile= new File(this.outputDir, pkg);
+
+                if(!outfile.exists())
                 {
-                    final File outfile= new File(this.outputDir, pkg);
-
-                    if(!outfile.exists())
-                    {
-                        outfile.createNewFile();
-                    }
-
-                    out= new FileOutputStream(outfile);
-
-                    this.writeClasses(out, jar, entries.get(pkg));
+                    outfile.createNewFile();
                 }
-                finally
-                {
-                    if(out != null)
-                    {
-                        out.close();
-                    }
-                }
+
+                final FileOutputStream out= closer.register(new FileOutputStream(outfile));
+
+                tasks.add(service.submit(new Task(out, jar, entries.get(pkg))));
+            }
+            // stop tasking
+            service.shutdown();
+            // wait for task
+            for(final Future<?> task : tasks)
+            {
+                task.get();
             }
         }
         catch(IOException e)
         {
             throw new RuntimeException(e);
+        }
+        catch(Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+        finally
+        {
+            service.shutdownNow();
+            try
+            {
+                closer.close();
+            }
+            catch(IOException e)
+            {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -110,61 +131,88 @@ public class ClassInfoAnalyzer
         return builder.build();
     }
 
-    private void writeClasses(OutputStream out, JarFile jar, Iterable<? extends JarEntry> entries)
-        throws IOException
+    private static class Task
+        implements Runnable
     {
-        JsonGenerator g= null;
-        try
+        public Task(OutputStream out, JarFile jar, Iterable<? extends JarEntry> entries)
+            throws IOException
         {
-            g= new JsonFactory().createGenerator(new FilterOutputStream(out){
-                @Override
-                public void close()
-                    throws IOException
-                {
-                }
-            });
-            /* g.setPrettyPrinter(new DefaultPrettyPrinter()); */
+            this.out= out;
+            this.jar= jar;
+            this.entries= entries;
+        }
 
-            g.writeStartArray();
-            for(final JarEntry entry : entries)
+        @Override
+        public void run()
+        {
+            final Closer closer= Closer.create();
+            try
             {
-                logger.debug("Reading `{}'.", entry.getName());
-
-                InputStream in= null;
-                try
-                {
-                    in= this.jar.getInputStream(entry);
-
-                    this.emmitClassInfo(g, in);
-                }
-                finally
-                {
-                    if(in != null)
+                final JsonGenerator g= closer.register(new JsonFactory().createGenerator(new FilterOutputStream(out){
+                    @Override
+                    public void close()
+                        throws IOException
                     {
-                        in.close();
+                    }
+                }));
+                /* g.setPrettyPrinter(new DefaultPrettyPrinter()); */
+
+                g.writeStartArray();
+                for(final JarEntry entry : this.entries)
+                {
+                    logger.debug("Reading `{}'.", entry.getName());
+
+                    InputStream in= null;
+                    try
+                    {
+                        in= this.jar.getInputStream(entry);
+
+                        this.emmitClassInfo(g, in);
+                    }
+                    finally
+                    {
+                        if(in != null)
+                        {
+                            in.close();
+                        }
                     }
                 }
+                g.writeEndArray();
             }
-            g.writeEndArray();
-        }
-        finally
-        {
-            if(g != null)
+            catch(IOException e)
             {
-                g.close();
+                logger.error("An exception occured during analysis task.", e);
+            }
+            finally
+            {
+                try
+                {
+                    closer.close();
+                }
+                catch(IOException e)
+                {
+                    throw new RuntimeException(e);
+                }
             }
         }
+
+        private void emmitClassInfo(JsonGenerator g, InputStream in)
+            throws IOException
+        {
+            final ClassReader reader= new ClassReader(in);
+
+            reader.accept(new ClassEmitter(g), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        }
+
+        private final OutputStream out;
+
+        private final JarFile jar;
+
+        private final Iterable<? extends JarEntry> entries;
     }
 
-    private void emmitClassInfo(JsonGenerator g, InputStream in)
-        throws IOException
-    {
-        final ClassReader reader= new ClassReader(in);
-
-        reader.accept(new ClassEmitter(g), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-    }
-
-    private static class ClassEmitter extends ClassVisitor
+    private static class ClassEmitter
+        extends ClassVisitor
     {
         public ClassEmitter(JsonGenerator g)
         {
