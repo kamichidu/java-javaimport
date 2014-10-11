@@ -22,9 +22,19 @@
     </properties>
 
     <scm>
+        <url>scm:git:https://github.com/kamichidu/java-javaimport/</url>
+        <connection>scm:git:https://github.com/kamichidu/java-javaimport/</connection>
         <developerConnection>scm:git:https://github.com/kamichidu/java-javaimport/</developerConnection>
-        <tag>javaimport-0.20</tag>
+        <tag>HEAD</tag>
     </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>internal.repo</id>
+            <name>Temporary Staging Repository</name>
+            <url>file://${project.build.directory}/mvn-repo</url>
+        </repository>
+    </distributionManagement>
 
     <build>
         <plugins>
@@ -70,6 +80,11 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.1</version>
             </plugin>
         </plugins>
     </build>
