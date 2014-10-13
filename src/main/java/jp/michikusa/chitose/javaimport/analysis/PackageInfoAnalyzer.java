@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.base.Function;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
+import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,13 +34,15 @@ public class PackageInfoAnalyzer
     public void run()
     {
         final Closer closer= Closer.create();
+        File outfile= null;
+        final File releasefile= new File(this.outputDir, "packages");
         try
         {
             final Iterable<CharSequence> pkgs= filter(
                 transform(Collections.list(this.jar.entries()), new JarEntryToPackageName()),
                 not(containsPattern("^META-INF"))
             );
-            final File outfile= new File(this.outputDir, "packages");
+            outfile= File.createTempFile("javaimport", "tmp");
             final FileOutputStream out= closer.register(new FileOutputStream(outfile));
             final JsonGenerator g= closer.register(new JsonFactory().createGenerator(out));
 
@@ -66,6 +69,22 @@ public class PackageInfoAnalyzer
             catch(IOException e)
             {
                 throw new RuntimeException(e);
+            }
+        }
+        logger.debug("outfile={}", outfile);
+        logger.debug("outfile.canRead()={}", outfile != null ? outfile.canRead() : "false");
+        logger.debug("releasefile={}", releasefile);
+        logger.debug("releasefile.exists()={}", releasefile != null ? releasefile.exists() : "false");
+        logger.debug("releasefile.canWrite()={}", releasefile != null ? releasefile.canWrite() : "false");
+        if(outfile != null && outfile.canRead() && !releasefile.exists())
+        {
+            try
+            {
+                Files.move(outfile, releasefile);
+            }
+            catch(IOException e)
+            {
+                logger.error("An exception occured during releasing packages file.", e);
             }
         }
     }
