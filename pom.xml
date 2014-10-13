@@ -4,7 +4,7 @@
     <groupId>jp.michikusa.chitose.unitejavaimport</groupId>
     <artifactId>javaimport</artifactId>
     <packaging>jar</packaging>
-    <version>0.2.3</version>
+    <version>0.2.4-SNAPSHOT</version>
     <name>javaimport</name>
     <url>https://github.com/kamichidu/java-javaimport</url>
     <licenses>
@@ -25,7 +25,7 @@
         <url>scm:git:https://github.com/kamichidu/java-javaimport/</url>
         <connection>scm:git:https://github.com/kamichidu/java-javaimport/</connection>
         <developerConnection>scm:git:https://github.com/kamichidu/java-javaimport/</developerConnection>
-        <tag>v0.2.3</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
