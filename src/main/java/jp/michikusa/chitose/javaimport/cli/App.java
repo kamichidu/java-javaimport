@@ -76,9 +76,7 @@ public class App
             final long startTime= System.nanoTime();
             new App(option).start();
             final long endTime= System.nanoTime();
-            System.out.format("time required: %s [ms]",
-                NumberFormat.getNumberInstance().format(TimeUnit.NANOSECONDS.toMillis(endTime - startTime))
-            );
+            logger.info("time required: {} [ms]", NumberFormat.getNumberInstance().format(TimeUnit.NANOSECONDS.toMillis(endTime - startTime)));
         }
         catch(CmdLineException e)
         {
