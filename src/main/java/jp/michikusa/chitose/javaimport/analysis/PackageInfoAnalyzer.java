@@ -80,6 +80,10 @@ public class PackageInfoAnalyzer
         {
             try
             {
+                if(!outfile.getParentFile().exists())
+                {
+                    outfile.getParentFile().mkdirs();
+                }
                 Files.move(outfile, releasefile);
             }
             catch(IOException e)
