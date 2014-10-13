@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.io.Closer;
+import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -47,7 +48,6 @@ public class ClassInfoAnalyzer
     public void run()
     {
         final ExecutorService service= Executors.newCachedThreadPool();
-        final Closer closer= Closer.create();
         try
         {
             if(!this.outputDir.exists())
@@ -78,16 +78,7 @@ public class ClassInfoAnalyzer
             final List<Future<?>> tasks= new ArrayList<Future<?>>(entries.keySet().size());
             for(final String pkg : entries.keySet())
             {
-                final File outfile= new File(this.outputDir, pkg);
-
-                if(!outfile.exists())
-                {
-                    outfile.createNewFile();
-                }
-
-                final FileOutputStream out= closer.register(new FileOutputStream(outfile));
-
-                tasks.add(service.submit(new Task(out, jar, entries.get(pkg))));
+                tasks.add(service.submit(new Task(new File(this.outputDir, pkg), jar, entries.get(pkg))));
             }
             // stop tasking
             service.shutdown();
@@ -108,14 +99,6 @@ public class ClassInfoAnalyzer
         finally
         {
             service.shutdownNow();
-            try
-            {
-                closer.close();
-            }
-            catch(IOException e)
-            {
-                throw new RuntimeException(e);
-            }
         }
     }
 
@@ -135,10 +118,10 @@ public class ClassInfoAnalyzer
     private static class Task
         implements Runnable
     {
-        public Task(OutputStream out, JarFile jar, Iterable<? extends JarEntry> entries)
+        public Task(File outfile, JarFile jar, Iterable<? extends JarEntry> entries)
             throws IOException
         {
-            this.out= out;
+            this.outfile= outfile;
             this.jar= jar;
             this.entries= entries;
         }
@@ -147,9 +130,11 @@ public class ClassInfoAnalyzer
         public void run()
         {
             final Closer closer= Closer.create();
+            File bufferfile= null;
             try
             {
-                final JsonGenerator g= closer.register(new JsonFactory().createGenerator(new FilterOutputStream(out){
+                bufferfile= File.createTempFile("javaimport", "tmp");
+                final JsonGenerator g= closer.register(new JsonFactory().createGenerator(new FilterOutputStream(new FileOutputStream(bufferfile)){
                     @Override
                     public void close()
                         throws IOException
@@ -195,6 +180,17 @@ public class ClassInfoAnalyzer
                     throw new RuntimeException(e);
                 }
             }
+            if(bufferfile != null && bufferfile.canRead() && !this.outfile.exists())
+            {
+                try
+                {
+                    Files.move(bufferfile, this.outfile);
+                }
+                catch(IOException e)
+                {
+                    logger.error("An exception occured during releasing file.", e);
+                }
+            }
         }
 
         private void emmitClassInfo(JsonGenerator g, InputStream in)
@@ -205,7 +201,7 @@ public class ClassInfoAnalyzer
             reader.accept(new ClassEmitter(g), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
         }
 
-        private final OutputStream out;
+        private final File outfile;
 
         private final JarFile jar;
 
