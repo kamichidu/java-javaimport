@@ -24,6 +24,10 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
+import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
+import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
+import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;
@@ -32,6 +36,7 @@ import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.google.common.base.Predicates.*;
 import static com.google.common.collect.Iterables.*;
 
 public class ClassInfoAnalyzer
@@ -55,26 +60,13 @@ public class ClassInfoAnalyzer
                 this.outputDir.mkdirs();
             }
 
-            final ImmutableMultimap<String, JarEntry> entries= this.splitEntries(filter(Collections.list(this.jar.entries()), new Predicate<JarEntry>(){
-                @Override
-                public boolean apply(JarEntry input)
-                {
-                    final String name= input.getName();
-
-                    // avoid to process non-class file
-                    if(!name.endsWith(".class"))
-                    {
-                        return false;
-                    }
-                    if(name.contains("$"))
-                    {
-                        // filter anonymouse class
-                        return !Pattern.compile("\\$\\d+\\.class$").matcher(name).find();
-                    }
-                    // filter `package-info'
-                    return !Pattern.compile("\\b(?:package-info)\\b").matcher(name).find();
-                }
-            }));
+            @SuppressWarnings("unchecked")
+            final Predicate<JarEntry> predicate= and(
+                IsClassFile.forJarEntry(),
+                not(IsPackageInfo.forJarEntry()),
+                not(IsAnonymouseClass.forJarEntry())
+            );
+            final ImmutableMultimap<String, JarEntry> entries= this.splitEntries(filter(Collections.list(this.jar.entries()), predicate));
             final List<Future<?>> tasks= new ArrayList<Future<?>>(entries.keySet().size());
             for(final String pkg : entries.keySet())
             {

@@ -3,6 +3,7 @@ package jp.michikusa.chitose.javaimport.analysis;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
 import com.google.common.io.Files;
@@ -13,6 +14,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+
+import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
+import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
+import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +43,14 @@ public class PackageInfoAnalyzer
         final File releasefile= new File(this.outputDir, "packages");
         try
         {
+            @SuppressWarnings("unchecked")
+            final Predicate<JarEntry> predicate= and(
+                IsClassFile.forJarEntry(),
+                not(IsPackageInfo.forJarEntry()),
+                not(IsAnonymouseClass.forJarEntry())
+            );
             final Iterable<CharSequence> pkgs= filter(
-                transform(Collections.list(this.jar.entries()), new JarEntryToPackageName()),
+                transform(filter(Collections.list(this.jar.entries()), predicate), new JarEntryToPackageName()),
                 not(containsPattern("^META-INF"))
             );
             outfile= File.createTempFile("javaimport", "tmp");
