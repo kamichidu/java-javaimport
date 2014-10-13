@@ -224,7 +224,7 @@ public class ClassInfoAnalyzer
             try
             {
                 final String canonicalName= name.replace('/', '.').replace('$', '.');
-                final String simpleName= name.contains(".") ? canonicalName.substring(name.lastIndexOf(".")) : canonicalName;
+                final String simpleName= canonicalName.contains(".") ? canonicalName.substring(canonicalName.lastIndexOf(".") + 1) : canonicalName;
 
                 this.g.writeStartObject();
                 this.g.writeStringField("canonical_name", canonicalName);
