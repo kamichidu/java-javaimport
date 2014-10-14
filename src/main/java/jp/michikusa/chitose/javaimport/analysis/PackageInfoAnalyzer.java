@@ -17,6 +17,7 @@ import java.util.jar.JarFile;
 import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
 import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
 import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
+import jp.michikusa.chitose.javaimport.util.LangSpec;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +91,7 @@ public class PackageInfoAnalyzer
             final File file= new File(input.getName());
             if(file.getParent() != null)
             {
-                return file.getParent().replace('/', '.');
+                return LangSpec.packageFromPath(file.getParent());
             }
             else
             {

@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
 import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
 import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
+import jp.michikusa.chitose.javaimport.util.LangSpec;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -101,7 +102,7 @@ public class ClassInfoAnalyzer
         for(final JarEntry entry : entries)
         {
             final File filename= new File(entry.getName());
-            builder.put(filename.getParent().replace('/', '.'), entry);
+            builder.put(LangSpec.packageFromPath(filename.getParent()), entry);
         }
 
         return builder.build();
@@ -195,14 +196,14 @@ public class ClassInfoAnalyzer
         {
             try
             {
-                final String canonicalName= name.replace('/', '.').replace('$', '.');
+                final String canonicalName= LangSpec.canonicalNameFromBinaryName(name);
                 final String simpleName= canonicalName.contains(".") ? canonicalName.substring(canonicalName.lastIndexOf(".") + 1) : canonicalName;
 
                 this.g.writeStartObject();
                 this.g.writeStringField("canonical_name", canonicalName);
                 this.g.writeStringField("simple_name", simpleName);
-                this.g.writeStringField("name", name.replace('/', '.'));
-                this.g.writeStringField("superclass", superName != null ? superName.replace('/', '.').replace('$', '.') : "");
+                this.g.writeStringField("name", LangSpec.nameFromBinaryName(name));
+                this.g.writeStringField("superclass", superName != null ? LangSpec.canonicalNameFromBinaryName(superName) : "");
                 this.g.writeBooleanField("is_enum", (access & Opcodes.ACC_ENUM) == Opcodes.ACC_ENUM);
                 this.g.writeBooleanField("is_interface", (access & Opcodes.ACC_INTERFACE) == Opcodes.ACC_INTERFACE);
                 this.g.writeBooleanField("is_annotation", (access & Opcodes.ACC_ANNOTATION) == Opcodes.ACC_ANNOTATION);
@@ -218,7 +219,7 @@ public class ClassInfoAnalyzer
                 this.g.writeArrayFieldStart("interfaces");
                 for(final String cname : interfaces)
                 {
-                    this.g.writeString(cname.replace('/', '.').replace('$', '.'));
+                    this.g.writeString(LangSpec.canonicalNameFromBinaryName(cname));
                 }
                 this.g.writeEndArray();
             }
