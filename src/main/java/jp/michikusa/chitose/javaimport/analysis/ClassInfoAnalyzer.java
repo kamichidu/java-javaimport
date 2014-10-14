@@ -281,6 +281,66 @@ public class ClassInfoAnalyzer
         @Override
         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions)
         {
+            final Closer closer= Closer.create();
+            ByteArrayOutputStream out= null;
+            try
+            {
+                out= closer.register(new ByteArrayOutputStream());
+                final JsonGenerator g= closer.register(new JsonFactory().createGenerator(out));
+
+                final Type type= Type.getMethodType(desc);
+
+                g.writeStartObject();
+                g.writeStringField("name", name);
+                g.writeStringField("return_type", type.getReturnType().getClassName());
+                g.writeArrayFieldStart("parameters");
+                for(final Type argType : type.getArgumentTypes())
+                {
+                    g.writeStartObject();
+                    g.writeStringField("type", argType.getClassName());
+                    g.writeEndObject();
+                }
+                g.writeEndArray();
+                g.writeArrayFieldStart("throws");
+                for(final String exception : (exceptions != null ? exceptions : new String[0]))
+                {
+                    g.writeStartObject();
+                    g.writeStringField("type", Type.getType(exception).getClassName());
+                    g.writeEndObject();
+                }
+                g.writeEndArray();
+                g.writeArrayFieldStart("modifiers");
+                {
+                    if((access & Opcodes.ACC_PUBLIC)    == Opcodes.ACC_PUBLIC)   { g.writeString("public"); }
+                    if((access & Opcodes.ACC_PROTECTED) == Opcodes.ACC_PROTECTED){ g.writeString("protected"); }
+                    if((access & Opcodes.ACC_PRIVATE)   == Opcodes.ACC_PRIVATE)  { g.writeString("private"); }
+                    if((access & Opcodes.ACC_FINAL)     == Opcodes.ACC_FINAL)    { g.writeString("final"); }
+                    if((access & Opcodes.ACC_ABSTRACT)  == Opcodes.ACC_ABSTRACT) { g.writeString("abstract"); }
+                    if((access & Opcodes.ACC_STATIC)    == Opcodes.ACC_STATIC)   { g.writeString("static"); }
+                }
+                g.writeEndArray();
+                g.writeEndObject();
+            }
+            catch(IOException e)
+            {
+                logger.error("Got an error.", e);
+            }
+            finally
+            {
+                try
+                {
+                    closer.close();
+                }
+                catch(IOException e)
+                {
+                    logger.error("Unable to close.", e);
+                }
+
+                if(out != null)
+                {
+                    this.methods.add(out.toString());
+                }
+            }
             return null;
         }
 
@@ -307,6 +367,13 @@ public class ClassInfoAnalyzer
                 }
                 this.g.writeEndArray();
 
+                this.g.writeArrayFieldStart("methods");
+                for(final CharSequence method : this.methods)
+                {
+                    this.g.writeRawValue(method.toString());
+                }
+                this.g.writeEndArray();
+
                 this.g.writeEndObject();
             }
             catch(IOException e)
@@ -318,6 +385,8 @@ public class ClassInfoAnalyzer
         private final JsonGenerator g;
 
         private final List<CharSequence> fields= new LinkedList<CharSequence>();
+
+        private final List<CharSequence> methods= new LinkedList<CharSequence>();
     }
 
     private static final Logger logger= LoggerFactory.getLogger(ClassInfoAnalyzer.class);
