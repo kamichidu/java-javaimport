@@ -108,31 +108,24 @@ public class ClassInfoAnalyzer
     }
 
     private static class Task
-        implements Runnable
+        extends AbstractAnalyzer
     {
         public Task(File outfile, JarFile jar, Iterable<? extends JarEntry> entries)
             throws IOException
         {
-            this.outfile= outfile;
+            super(outfile);
+
             this.jar= jar;
             this.entries= entries;
         }
 
         @Override
-        public void run()
+        public void runImpl(File outfile)
         {
             final Closer closer= Closer.create();
-            File bufferfile= null;
             try
             {
-                bufferfile= File.createTempFile("javaimport", "tmp");
-                final JsonGenerator g= closer.register(new JsonFactory().createGenerator(new FilterOutputStream(new FileOutputStream(bufferfile)){
-                    @Override
-                    public void close()
-                        throws IOException
-                    {
-                    }
-                }));
+                final JsonGenerator g= closer.register(new JsonFactory().createGenerator(new FileOutputStream(outfile)));
                 /* g.setPrettyPrinter(new DefaultPrettyPrinter()); */
 
                 g.writeStartArray();
@@ -172,17 +165,6 @@ public class ClassInfoAnalyzer
                     throw new RuntimeException(e);
                 }
             }
-            if(bufferfile != null && bufferfile.canRead() && !this.outfile.exists())
-            {
-                try
-                {
-                    Files.move(bufferfile, this.outfile);
-                }
-                catch(IOException e)
-                {
-                    logger.error("An exception occured during releasing file.", e);
-                }
-            }
         }
 
         private void emmitClassInfo(JsonGenerator g, InputStream in)
@@ -192,8 +174,6 @@ public class ClassInfoAnalyzer
 
             reader.accept(new ClassEmitter(g), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
         }
-
-        private final File outfile;
 
         private final JarFile jar;
 
