@@ -26,6 +26,7 @@ import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
 import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
 import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
 import jp.michikusa.chitose.javaimport.util.LangSpec;
+import jp.michikusa.chitose.javaimport.util.Stringifier;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -207,13 +208,9 @@ public class ClassInfoAnalyzer
                 this.g.writeBooleanField("is_interface", (access & Opcodes.ACC_INTERFACE) == Opcodes.ACC_INTERFACE);
                 this.g.writeBooleanField("is_annotation", (access & Opcodes.ACC_ANNOTATION) == Opcodes.ACC_ANNOTATION);
                 this.g.writeArrayFieldStart("modifiers");
+                for(final CharSequence acc : Stringifier.classAccessFlags(access))
                 {
-                    if((access & Opcodes.ACC_PUBLIC)    == Opcodes.ACC_PUBLIC)   { this.g.writeString("public"); }
-                    if((access & Opcodes.ACC_PROTECTED) == Opcodes.ACC_PROTECTED){ this.g.writeString("protected"); }
-                    if((access & Opcodes.ACC_PRIVATE)   == Opcodes.ACC_PRIVATE)  { this.g.writeString("private"); }
-                    if((access & Opcodes.ACC_FINAL)     == Opcodes.ACC_FINAL)    { this.g.writeString("final"); }
-                    if((access & Opcodes.ACC_ABSTRACT)  == Opcodes.ACC_ABSTRACT) { this.g.writeString("abstract"); }
-                    if((access & Opcodes.ACC_STATIC)    == Opcodes.ACC_STATIC)   { this.g.writeString("static"); }
+                    this.g.writeString(acc.toString());
                 }
                 this.g.writeEndArray();
                 this.g.writeArrayFieldStart("interfaces");
@@ -244,13 +241,9 @@ public class ClassInfoAnalyzer
                 g.writeStringField("type", Type.getType(desc).getClassName());
                 g.writeStringField("value", "" + value);
                 g.writeArrayFieldStart("modifiers");
+                for(final CharSequence acc : Stringifier.fieldAccessFlags(access))
                 {
-                    if((access & Opcodes.ACC_PUBLIC)    == Opcodes.ACC_PUBLIC)   { g.writeString("public"); }
-                    if((access & Opcodes.ACC_PROTECTED) == Opcodes.ACC_PROTECTED){ g.writeString("protected"); }
-                    if((access & Opcodes.ACC_PRIVATE)   == Opcodes.ACC_PRIVATE)  { g.writeString("private"); }
-                    if((access & Opcodes.ACC_FINAL)     == Opcodes.ACC_FINAL)    { g.writeString("final"); }
-                    if((access & Opcodes.ACC_ABSTRACT)  == Opcodes.ACC_ABSTRACT) { g.writeString("abstract"); }
-                    if((access & Opcodes.ACC_STATIC)    == Opcodes.ACC_STATIC)   { g.writeString("static"); }
+                    g.writeString(acc.toString());
                 }
                 g.writeEndArray();
                 g.writeEndObject();
@@ -310,13 +303,9 @@ public class ClassInfoAnalyzer
                 }
                 g.writeEndArray();
                 g.writeArrayFieldStart("modifiers");
+                for(final CharSequence acc : Stringifier.methodAccessFlags(access))
                 {
-                    if((access & Opcodes.ACC_PUBLIC)    == Opcodes.ACC_PUBLIC)   { g.writeString("public"); }
-                    if((access & Opcodes.ACC_PROTECTED) == Opcodes.ACC_PROTECTED){ g.writeString("protected"); }
-                    if((access & Opcodes.ACC_PRIVATE)   == Opcodes.ACC_PRIVATE)  { g.writeString("private"); }
-                    if((access & Opcodes.ACC_FINAL)     == Opcodes.ACC_FINAL)    { g.writeString("final"); }
-                    if((access & Opcodes.ACC_ABSTRACT)  == Opcodes.ACC_ABSTRACT) { g.writeString("abstract"); }
-                    if((access & Opcodes.ACC_STATIC)    == Opcodes.ACC_STATIC)   { g.writeString("static"); }
+                    g.writeString(acc.toString());
                 }
                 g.writeEndArray();
                 g.writeEndObject();
