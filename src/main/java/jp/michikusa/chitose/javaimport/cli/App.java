@@ -2,6 +2,7 @@ package jp.michikusa.chitose.javaimport.cli;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 import jp.michikusa.chitose.javaimport.analysis.ClassInfoAnalyzer;
 import jp.michikusa.chitose.javaimport.analysis.PackageInfoAnalyzer;
+import jp.michikusa.chitose.javaimport.util.CharsetOptionHandler;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -45,6 +47,10 @@ public class App
         @Getter @Setter
         @Option(name= "-o", aliases= "--outputdir", required= true, handler= FileOptionHandler.class, usage= "Output directory")
         private File dataDir;
+
+        @Getter @Setter
+        @Option(name= "-e", aliases= "--sourceencoding", required= false, handler= CharsetOptionHandler.class, usage= "Source encoding")
+        private Charset sourceEncoding= Charset.forName("Windows-31j");
 
         @Argument(required= true, multiValued= true, handler= FileOptionHandler.class, usage= "Paths")
         private File[] paths;
@@ -106,7 +112,7 @@ public class App
                 {
                     logger.info("Push Analysis task for {}", path);
                     tasks.add(service.submit(new PackageInfoAnalyzer(this.option.getDataDir(), path)));
-                    tasks.add(service.submit(new ClassInfoAnalyzer(this.option.getDataDir(), path)));
+                    tasks.add(service.submit(new ClassInfoAnalyzer(this.option.getDataDir(), path, this.option.getSourceEncoding())));
                 }
                 catch(IOException e)
                 {

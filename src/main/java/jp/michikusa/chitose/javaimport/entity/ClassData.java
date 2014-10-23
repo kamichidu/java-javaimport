@@ -31,6 +31,11 @@ public class ClassData
         return ImmutableSet.copyOf(this.interfaces);
     }
 
+    public void addInterface(CharSequence interface_)
+    {
+    	this.interfaces.add(interface_);
+    }
+
     public void setInterfaces(Iterable<? extends CharSequence> interfaces)
     {
         this.interfaces.clear();
