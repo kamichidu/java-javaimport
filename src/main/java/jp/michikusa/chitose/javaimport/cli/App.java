@@ -32,22 +32,22 @@ public class App
 {
     public static class AppOption
     {
-        public Iterable<File> getJarpaths()
+        public Iterable<File> getPaths()
         {
-            return asList(this.jarpaths);
+            return asList(this.paths);
         }
 
-        public void setJarpaths(Iterable<? extends File> jarpaths)
+        public void setPaths(Iterable<? extends File> paths)
         {
-            this.jarpaths= asList(jarpaths).toArray(new File[0]);
+            this.paths= asList(paths).toArray(new File[0]);
         }
 
         @Getter @Setter
         @Option(name= "-o", aliases= "--outputdir", required= true, handler= FileOptionHandler.class, usage= "Output directory")
         private File dataDir;
 
-        @Argument(required= true, multiValued= true, handler= FileOptionHandler.class, usage= "Jar paths")
-        private File[] jarpaths;
+        @Argument(required= true, multiValued= true, handler= FileOptionHandler.class, usage= "Paths")
+        private File[] paths;
 
         @Getter @Setter
         @Option(name= "-h", aliases= "--help", help= true, usage= "Print this message.")
@@ -71,7 +71,7 @@ public class App
 
             logger.info("Start to analyze and emmit class information with {");
             logger.info("--datadir=`{}'", option.getDataDir());
-            logger.info("--jarpaths=`{}'", option.getJarpaths());
+            logger.info("--paths=`{}'", option.getPaths());
             logger.info("}");
             final long startTime= System.nanoTime();
             new App(option).start();
@@ -99,14 +99,14 @@ public class App
         final ExecutorService service= Executors.newCachedThreadPool();
         try
         {
-            final List<Future<?>> tasks= new ArrayList<Future<?>>(size(this.option.getJarpaths()));
-            for(final File jarpath : this.option.getJarpaths())
+            final List<Future<?>> tasks= new ArrayList<Future<?>>(size(this.option.getPaths()));
+            for(final File path : this.option.getPaths())
             {
                 try
                 {
-                    logger.info("Push Analysis task for {}", jarpath);
-                    tasks.add(service.submit(new PackageInfoAnalyzer(this.option.getDataDir(), jarpath)));
-                    tasks.add(service.submit(new ClassInfoAnalyzer(this.option.getDataDir(), jarpath)));
+                    logger.info("Push Analysis task for {}", path);
+                    tasks.add(service.submit(new PackageInfoAnalyzer(this.option.getDataDir(), path)));
+                    tasks.add(service.submit(new ClassInfoAnalyzer(this.option.getDataDir(), path)));
                 }
                 catch(IOException e)
                 {

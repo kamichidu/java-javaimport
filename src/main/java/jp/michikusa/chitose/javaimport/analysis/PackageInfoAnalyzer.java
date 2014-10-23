@@ -10,30 +10,32 @@ import com.google.common.io.Closer;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
 import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
 import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
+import jp.michikusa.chitose.javaimport.util.FileSystem;
+import jp.michikusa.chitose.javaimport.util.FileSystem.Path;
 import jp.michikusa.chitose.javaimport.util.LangSpec;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Predicates.*;
-import static com.google.common.collect.Iterables.*;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.base.Predicates.containsPattern;
+import static com.google.common.base.Predicates.not;
+import static com.google.common.collect.Iterables.filter;
+import static com.google.common.collect.Iterables.transform;
 
 public class PackageInfoAnalyzer
     extends AbstractAnalyzer
 {
-    public PackageInfoAnalyzer(File outputDir, File jarpath)
+    public PackageInfoAnalyzer(File outputDir, File path)
         throws IOException
     {
-        super(new File(new File(outputDir, jarpath.getName()), "packages"));
+        super(new File(toOutputDirectory(outputDir, path), "packages"));
 
-        this.jar= new JarFile(jarpath);
+        this.fs= FileSystem.create(path);
     }
 
     @Override
@@ -43,13 +45,13 @@ public class PackageInfoAnalyzer
         try
         {
             @SuppressWarnings("unchecked")
-            final Predicate<JarEntry> predicate= and(
-                IsClassFile.forJarEntry(),
-                not(IsPackageInfo.forJarEntry()),
-                not(IsAnonymouseClass.forJarEntry())
+            final Predicate<Path> predicate= and(
+                new IsClassFile(),
+                not(new IsPackageInfo()),
+                not(new IsAnonymouseClass())
             );
             final Iterable<CharSequence> pkgs= filter(
-                transform(filter(Collections.list(this.jar.entries()), predicate), new JarEntryToPackageName()),
+                transform(this.fs.listFiles(predicate), new PathToPackage()),
                 not(containsPattern("^META-INF"))
             );
             final FileOutputStream out= closer.register(new FileOutputStream(outfile));
@@ -82,16 +84,17 @@ public class PackageInfoAnalyzer
         }
     }
 
-    private static class JarEntryToPackageName
-        implements Function<JarEntry, CharSequence>
+    private static class PathToPackage
+        implements Function<Path, CharSequence>
     {
         @Override
-        public CharSequence apply(JarEntry input)
+        public CharSequence apply(Path input)
         {
-            final File file= new File(input.getName());
-            if(file.getParent() != null)
+            final CharSequence parent= input.getParent();
+
+            if(parent != null)
             {
-                return LangSpec.packageFromPath(file.getParent());
+                return LangSpec.packageFromPath(parent);
             }
             else
             {
@@ -102,5 +105,5 @@ public class PackageInfoAnalyzer
 
     private static final Logger logger= LoggerFactory.getLogger(PackageInfoAnalyzer.class);
 
-    private final JarFile jar;
+    private final FileSystem fs;
 }

@@ -4,6 +4,8 @@ import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +13,25 @@ import org.slf4j.LoggerFactory;
 abstract class AbstractAnalyzer
     implements Runnable
 {
+    public static File toOutputDirectory(File dataDir, File path)
+    {
+        if(path.isFile() && (path.getName().endsWith(".jar") || path.getName().endsWith(".zip")))
+        {
+            return new File(dataDir, path.getName());
+        }
+
+        try
+        {
+            final String filename= URLEncoder.encode(path.getAbsolutePath(), "UTF-8");
+
+            return new File(dataDir, filename);
+        }
+        catch(UnsupportedEncodingException e)
+        {
+            throw new AssertionError(e);
+        }
+    }
+
     public AbstractAnalyzer(File releasefile)
     {
         this.releasefile= releasefile;

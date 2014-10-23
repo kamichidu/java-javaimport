@@ -2,30 +2,14 @@ package jp.michikusa.chitose.javaimport.predicate;
 
 import com.google.common.base.Predicate;
 
-import java.io.File;
-import java.util.jar.JarEntry;
+import jp.michikusa.chitose.javaimport.util.FileSystem.Path;
 
-public final class IsClassFile
+public class IsClassFile
+    implements Predicate<Path>
 {
-    public static Predicate<JarEntry> forJarEntry()
+    @Override
+    public boolean apply(Path input)
     {
-        return new Predicate<JarEntry>(){
-            @Override
-            public boolean apply(JarEntry input)
-            {
-                return input.getName().endsWith(".class");
-            }
-        };
-    }
-
-    public static Predicate<File> forFile()
-    {
-        return new Predicate<File>(){
-            @Override
-            public boolean apply(File input)
-            {
-                return input.getName().endsWith(".class");
-            }
-        };
+        return input.getFilename().toString().endsWith(".class");
     }
 }

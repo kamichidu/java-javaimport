@@ -2,32 +2,17 @@ package jp.michikusa.chitose.javaimport.predicate;
 
 import com.google.common.base.Predicate;
 
-import java.io.File;
-import java.util.jar.JarEntry;
 import java.util.regex.Pattern;
 
-public final class IsPackageInfo
-{
-    public static Predicate<JarEntry> forJarEntry()
-    {
-        return new Predicate<JarEntry>(){
-            @Override
-            public boolean apply(JarEntry input)
-            {
-                return pattern.matcher(input.getName()).find();
-            }
-        };
-    }
+import jp.michikusa.chitose.javaimport.util.FileSystem.Path;
 
-    public static Predicate<File> forFile()
+public final class IsPackageInfo
+    implements Predicate<Path>
+{
+    @Override
+    public boolean apply(Path input)
     {
-        return new Predicate<File>(){
-            @Override
-            public boolean apply(File input)
-            {
-                return pattern.matcher(input.getName()).find();
-            }
-        };
+        return pattern.matcher(input.getFilename()).find();
     }
 
     private static final Pattern pattern= Pattern.compile("\\b(?:package-info)\\b");

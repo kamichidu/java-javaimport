@@ -12,13 +12,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 import jp.michikusa.chitose.javaimport.entity.ClassData;
 import jp.michikusa.chitose.javaimport.entity.ExceptionType;
@@ -28,6 +25,8 @@ import jp.michikusa.chitose.javaimport.entity.MethodParameterData;
 import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
 import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
 import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
+import jp.michikusa.chitose.javaimport.util.FileSystem;
+import jp.michikusa.chitose.javaimport.util.FileSystem.Path;
 import jp.michikusa.chitose.javaimport.util.JsonCodec;
 import jp.michikusa.chitose.javaimport.util.LangSpec;
 import jp.michikusa.chitose.javaimport.util.Stringifier;
@@ -41,19 +40,22 @@ import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Predicates.*;
-import static com.google.common.collect.Iterables.*;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.base.Predicates.not;
+import static com.google.common.collect.Iterables.transform;
 
 import static java.util.Arrays.asList;
+
+import static jp.michikusa.chitose.javaimport.analysis.AbstractAnalyzer.toOutputDirectory;
 
 public class ClassInfoAnalyzer
     implements Runnable
 {
-    public ClassInfoAnalyzer(File outputDir, File jarpath)
+    public ClassInfoAnalyzer(File outputDir, File path)
         throws IOException
     {
-        this.outputDir= new File(outputDir, jarpath.getName());
-        this.jar= new JarFile(jarpath);
+        this.outputDir= toOutputDirectory(outputDir, path);
+        this.fs= FileSystem.create(path);
     }
 
     @Override
@@ -68,16 +70,16 @@ public class ClassInfoAnalyzer
             }
 
             @SuppressWarnings("unchecked")
-            final Predicate<JarEntry> predicate= and(
-                IsClassFile.forJarEntry(),
-                not(IsPackageInfo.forJarEntry()),
-                not(IsAnonymouseClass.forJarEntry())
+            final Predicate<Path> predicate= and(
+                new IsClassFile(),
+                not(new IsPackageInfo()),
+                not(new IsAnonymouseClass())
             );
-            final ImmutableMultimap<String, JarEntry> entries= this.splitEntries(filter(Collections.list(this.jar.entries()), predicate));
+            final ImmutableMultimap<String, Path> entries= this.splitEntries(this.fs.listFiles(predicate));
             final List<Future<?>> tasks= new ArrayList<Future<?>>(entries.keySet().size());
             for(final String pkg : entries.keySet())
             {
-                tasks.add(service.submit(new Task(new File(this.outputDir, pkg), jar, entries.get(pkg))));
+                tasks.add(service.submit(new Task(new File(this.outputDir, pkg), this.fs, entries.get(pkg))));
             }
             // stop tasking
             service.shutdown();
@@ -101,14 +103,13 @@ public class ClassInfoAnalyzer
         }
     }
 
-    private ImmutableMultimap<String, JarEntry> splitEntries(Iterable<? extends JarEntry> entries)
+    private ImmutableMultimap<String, Path> splitEntries(Iterable<? extends Path> entries)
     {
-        final ImmutableMultimap.Builder<String, JarEntry> builder= ImmutableMultimap.builder();
+        final ImmutableMultimap.Builder<String, Path> builder= ImmutableMultimap.builder();
 
-        for(final JarEntry entry : entries)
+        for(final Path entry : entries)
         {
-            final File filename= new File(entry.getName());
-            builder.put(LangSpec.packageFromPath(filename.getParent()), entry);
+            builder.put(LangSpec.packageFromPath(entry.getParent()), entry);
         }
 
         return builder.build();
@@ -117,12 +118,12 @@ public class ClassInfoAnalyzer
     private static class Task
         extends AbstractAnalyzer
     {
-        public Task(File outfile, JarFile jar, Iterable<? extends JarEntry> entries)
+        public Task(File outfile, FileSystem fs, Iterable<? extends Path> entries)
             throws IOException
         {
             super(outfile);
 
-            this.jar= jar;
+            this.fs= fs;
             this.entries= entries;
         }
 
@@ -136,14 +137,14 @@ public class ClassInfoAnalyzer
                 /* g.setPrettyPrinter(new DefaultPrettyPrinter()); */
 
                 g.writeStartArray();
-                for(final JarEntry entry : this.entries)
+                for(final Path entry : this.entries)
                 {
-                    logger.debug("Reading `{}'.", entry.getName());
+                    logger.debug("Reading `{}'.", entry.getFilename());
 
                     InputStream in= null;
                     try
                     {
-                        in= this.jar.getInputStream(entry);
+                        in= this.fs.openInputStream(entry.getFilename());
 
                         this.emmitClassInfo(g, in);
                     }
@@ -185,9 +186,9 @@ public class ClassInfoAnalyzer
             g.writeObject(emitter.getBuiltObject());
         }
 
-        private final JarFile jar;
+        private final FileSystem fs;
 
-        private final Iterable<? extends JarEntry> entries;
+        private final Iterable<? extends Path> entries;
     }
 
     private static class ClassEmitter
@@ -281,5 +282,5 @@ public class ClassInfoAnalyzer
 
     private final File outputDir;
 
-    private final JarFile jar;
+    private final FileSystem fs;
 }
