@@ -13,6 +13,7 @@ import java.io.IOException;
 
 import jp.michikusa.chitose.javaimport.predicate.IsAnonymouseClass;
 import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
+import jp.michikusa.chitose.javaimport.predicate.IsJavaFile;
 import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
 import jp.michikusa.chitose.javaimport.util.FileSystem;
 import jp.michikusa.chitose.javaimport.util.FileSystem.Path;
@@ -24,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import static com.google.common.base.Predicates.and;
 import static com.google.common.base.Predicates.containsPattern;
 import static com.google.common.base.Predicates.not;
+import static com.google.common.base.Predicates.or;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.transform;
 
@@ -46,7 +48,7 @@ public class PackageInfoAnalyzer
         {
             @SuppressWarnings("unchecked")
             final Predicate<Path> predicate= and(
-                new IsClassFile(),
+                or(new IsClassFile(), new IsJavaFile()),
                 not(new IsPackageInfo()),
                 not(new IsAnonymouseClass())
             );

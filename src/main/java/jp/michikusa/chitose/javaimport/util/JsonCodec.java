@@ -166,6 +166,11 @@ public class JsonCodec
             g.writeEndArray();
         }
         g.writeEndObject();
+
+        for(final ClassData classData : data.getClasses())
+        {
+            this.write(g, classData);
+        }
     }
 
     private void write(JsonGenerator g, FieldData data)

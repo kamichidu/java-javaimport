@@ -15,6 +15,11 @@ public class ClassData
         return ImmutableSet.copyOf(this.modifiers);
     }
 
+    public void addModifier(CharSequence modifier)
+    {
+        this.modifiers.add(modifier);
+    }
+
     public void setModifiers(Iterable<? extends CharSequence> modifiers)
     {
         this.modifiers.clear();
@@ -64,6 +69,22 @@ public class ClassData
         this.methods.addAll(ImmutableSet.copyOf(methods));
     }
 
+    public Iterable<ClassData> getClasses()
+    {
+        return ImmutableSet.copyOf(this.classes);
+    }
+
+    public void addClass(ClassData clazz)
+    {
+        this.classes.add(clazz);
+    }
+
+    public void setClasses(Iterable<? extends ClassData> classes)
+    {
+        this.classes.clear();
+        this.classes.addAll(ImmutableSet.copyOf(classes));
+    }
+
     @Getter @Setter
     private CharSequence packageName;
 
@@ -95,4 +116,6 @@ public class ClassData
     private final Set<FieldData> fields= Sets.newConcurrentHashSet();
 
     private final Set<MethodData> methods= Sets.newConcurrentHashSet();
+
+    private final Set<ClassData> classes= Sets.newConcurrentHashSet();
 }
