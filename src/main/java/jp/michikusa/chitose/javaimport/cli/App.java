@@ -1,5 +1,8 @@
 package jp.michikusa.chitose.javaimport.cli;
 
+import static com.google.common.collect.Iterables.size;
+import static java.util.Arrays.asList;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -13,8 +16,8 @@ import java.util.concurrent.TimeUnit;
 
 import jp.michikusa.chitose.javaimport.analysis.ClassInfoAnalyzer;
 import jp.michikusa.chitose.javaimport.analysis.PackageInfoAnalyzer;
+import jp.michikusa.chitose.javaimport.analysis.SourceInfoAnalyzer;
 import jp.michikusa.chitose.javaimport.util.CharsetOptionHandler;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,10 +28,6 @@ import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.google.common.collect.Iterables.*;
-
-import static java.util.Arrays.asList;
 
 public class App
 {
@@ -112,7 +111,8 @@ public class App
                 {
                     logger.info("Push Analysis task for {}", path);
                     tasks.add(service.submit(new PackageInfoAnalyzer(this.option.getDataDir(), path)));
-                    tasks.add(service.submit(new ClassInfoAnalyzer(this.option.getDataDir(), path, this.option.getSourceEncoding())));
+                    tasks.add(service.submit(new ClassInfoAnalyzer(this.option.getDataDir(), path)));
+                    tasks.add(service.submit(new SourceInfoAnalyzer(this.option.getDataDir(), path, this.option.getSourceEncoding())));
                 }
                 catch(IOException e)
                 {
