@@ -123,6 +123,13 @@
         </profile>
     </profiles>
 
+    <repositories>
+        <repository>
+            <id>repo-lolivimson</id>
+            <url>https://raw.githubusercontent.com/kamichidu/java-lolivimson/mvn-repo/</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
@@ -176,6 +183,12 @@
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>
             <version>4.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>jp.michikusa.chitose</groupId>
+            <artifactId>lolivimson</artifactId>
+            <version>0.0.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

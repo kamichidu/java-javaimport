@@ -2,6 +2,14 @@ package jp.michikusa.chitose.javaimport.util;
 
 public class LangSpec
 {
+    public static String packageFromBinaryName(CharSequence name)
+    {
+        return name.toString()
+            .replaceFirst("(?:/|\\\\)[^/\\\\]+$", "")
+            .replaceAll("(?:/|\\\\)", ".")
+        ;
+    }
+
     public static String packageFromPath(CharSequence path)
     {
         return path.toString().replaceAll("(?:/|\\$|\\\\)", ".");

@@ -1,21 +1,24 @@
 package jp.michikusa.chitose.javaimport.analysis;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.io.Closer;
+import static com.google.common.base.Predicates.and;
+import static com.google.common.base.Predicates.not;
+import static com.google.common.collect.Iterables.transform;
+import static java.util.Arrays.asList;
+import static jp.michikusa.chitose.javaimport.analysis.AbstractAnalyzer.toOutputDirectory;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import jp.michikusa.chitose.javaimport.entity.ClassData;
 import jp.michikusa.chitose.javaimport.entity.ExceptionType;
@@ -27,9 +30,10 @@ import jp.michikusa.chitose.javaimport.predicate.IsClassFile;
 import jp.michikusa.chitose.javaimport.predicate.IsPackageInfo;
 import jp.michikusa.chitose.javaimport.util.FileSystem;
 import jp.michikusa.chitose.javaimport.util.FileSystem.Path;
-import jp.michikusa.chitose.javaimport.util.JsonCodec;
+import jp.michikusa.chitose.javaimport.util.IndexCodec;
 import jp.michikusa.chitose.javaimport.util.LangSpec;
 import jp.michikusa.chitose.javaimport.util.Stringifier;
+import jp.michikusa.chitose.lolivimson.core.VimsonGenerator;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -40,13 +44,10 @@ import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Predicates.and;
-import static com.google.common.base.Predicates.not;
-import static com.google.common.collect.Iterables.transform;
-
-import static java.util.Arrays.asList;
-
-import static jp.michikusa.chitose.javaimport.analysis.AbstractAnalyzer.toOutputDirectory;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Queues;
 
 public class ClassInfoAnalyzer
     implements Runnable
@@ -75,14 +76,61 @@ public class ClassInfoAnalyzer
                 not(new IsPackageInfo()),
                 not(new IsAnonymouseClass())
             );
+            final BlockingQueue<ClassData> buffer= Queues.newLinkedBlockingQueue();
             final ImmutableMultimap<String, Path> entries= this.splitEntries(this.fs.listFiles(predicate));
             final List<Future<?>> tasks= new ArrayList<Future<?>>(entries.keySet().size());
             for(final String pkg : entries.keySet())
             {
-                tasks.add(service.submit(new Task(new File(this.outputDir, pkg), this.fs, entries.get(pkg))));
+                tasks.add(service.submit(new Task(buffer, this.fs, entries.get(pkg))));
             }
             // stop tasking
             service.shutdown();
+
+            VimsonGenerator g= null;
+            try
+            {
+//                g= new VimsonGenerator(new FileOutputStream(new File(outputDir, "classes.index")));
+                g= new VimsonGenerator(new FilterOutputStream(System.out){
+                    @Override
+                    public void close() throws IOException
+                    {
+                    }
+                });
+
+                g.setObjectCodec(new IndexCodec());
+
+                int remaining= tasks.size();
+//                g.writeStartList();
+                while(remaining > 0)
+                {
+                    final ClassData data= buffer.poll(50, TimeUnit.MILLISECONDS);
+                    if(data != null)
+                    {
+                        if(data != Task.TERMINAL)
+                        {
+                            g.writeObject(data);
+                            g.writeRaw("\n");
+                        }
+                        else
+                        {
+                            --remaining;
+                        }
+                    }
+                }
+//                g.writeEndList();
+            }
+            catch(IOException e)
+            {
+                logger.error("Got an error when writing an index file.", e);
+            }
+            finally
+            {
+                if(g != null)
+                {
+                    g.close();
+                }
+            }
+
             // wait for task
             for(final Future<?> task : tasks)
             {
@@ -116,27 +164,23 @@ public class ClassInfoAnalyzer
     }
 
     private static class Task
-        extends AbstractAnalyzer
+        implements Runnable
     {
-        public Task(File outfile, FileSystem fs, Iterable<? extends Path> entries)
+        public static final ClassData TERMINAL= new ClassData();
+
+        public Task(Queue<? super ClassData> out, FileSystem fs, Iterable<? extends Path> entries)
             throws IOException
         {
-            super(outfile);
-
+            this.out= out;
             this.fs= fs;
             this.entries= entries;
         }
 
         @Override
-        public void runImpl(File outfile)
+        public void run()
         {
-            final Closer closer= Closer.create();
             try
             {
-                final JsonGenerator g= closer.register(new JsonFactory(new JsonCodec()).createGenerator(new FileOutputStream(outfile)));
-                /* g.setPrettyPrinter(new DefaultPrettyPrinter()); */
-
-                g.writeStartArray();
                 for(final Path entry : this.entries)
                 {
                     logger.debug("Reading `{}'.", entry.getFilename());
@@ -146,36 +190,35 @@ public class ClassInfoAnalyzer
                     {
                         in= this.fs.openInputStream(entry.getFilename());
 
-                        this.emmitClassInfo(g, in);
+                        this.emmitClassInfo(in);
+                    }
+                    catch(IOException e)
+                    {
+                        logger.error("An exception occured during analysis task.", e);
                     }
                     finally
                     {
                         if(in != null)
                         {
-                            in.close();
+                            try
+                            {
+                                in.close();
+                            }
+                            catch(IOException e)
+                            {
+                                throw new RuntimeException(e);
+                            }
                         }
                     }
                 }
-                g.writeEndArray();
-            }
-            catch(IOException e)
-            {
-                logger.error("An exception occured during analysis task.", e);
             }
             finally
             {
-                try
-                {
-                    closer.close();
-                }
-                catch(IOException e)
-                {
-                    throw new RuntimeException(e);
-                }
+                out.offer(TERMINAL);
             }
         }
 
-        private void emmitClassInfo(JsonGenerator g, InputStream in)
+        private void emmitClassInfo(InputStream in)
             throws IOException
         {
             final ClassReader reader= new ClassReader(in);
@@ -183,8 +226,10 @@ public class ClassInfoAnalyzer
 
             reader.accept(emitter, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
-            g.writeObject(emitter.getBuiltObject());
+            while(!this.out.offer(emitter.getBuiltObject())){}
         }
+
+        private final Queue<? super ClassData> out;
 
         private final FileSystem fs;
 
@@ -210,6 +255,7 @@ public class ClassInfoAnalyzer
             final String canonicalName= LangSpec.canonicalNameFromBinaryName(name);
             final String simpleName= canonicalName.contains(".") ? canonicalName.substring(canonicalName.lastIndexOf(".") + 1) : canonicalName;
 
+            this.object.setPackageName(LangSpec.packageFromBinaryName(name));
             this.object.setCanonicalName(canonicalName);
             this.object.setSimpleName(simpleName);
             this.object.setName(LangSpec.nameFromBinaryName(name));
