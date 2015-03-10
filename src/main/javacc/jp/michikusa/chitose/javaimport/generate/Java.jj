@@ -1,0 +1,1391 @@
+PARSER_BEGIN(JavaParser)
+package jp.michikusa.chitose.javaimport.generate.parser;
+
+import java.io.*;
+
+public class JavaParser
+{
+}
+PARSER_END(JavaParser)
+
+SKIP:
+    { " "
+    | "\t"
+    | "\f"
+    | "\u001a"
+}
+
+TOKEN:
+    { "public"
+    | "protected"
+    | "private"
+    | "abstract"
+    | "static"
+    | "class"
+    | "interface"
+    | "@interface"
+    | <JavaIdentifier: (["a"-"z"] | ["A"-"Z"] | ["0"-"9"] | "_" | "$")+>
+}
+
+void compilationUnit(): {}
+    { (packageDeclaration())?
+      (importDeclaration())*
+      (typeDeclaration())*
+    }
+
+void packageDeclaration(): {}
+    { (packageModifier())* "package" packageName() ";"
+    }
+
+void packageName(): {}
+    { javaIdentifier() ("." javaIdentifier())*
+    }
+
+void javaIdentifier(): {} { <JavaIdentifier> }
+
+void packageModifier(): {}
+    { annotation()
+    }
+
+void importDeclaration(): {}
+    { singleTypeImportDeclaration()
+    | typeImportOnDemandDeclaration()
+    | singleStaticImportDeclaration()
+    | staticImportOnDemandDeclaration()
+    }
+
+void singleTypeImportDeclaration(): {}
+    { "import" typeName() ";"
+    }
+
+void typeImportOnDemandDeclaration(): {}
+    { "import" packageOrTypeName() "." "*" ";"
+    }
+
+void singleStaticImportDeclaration(): {}
+    { "import" "static" typeName() "." javaIdentifier() ";"
+    }
+
+void staticImportOnDemandDeclaration(): {}
+    { "import" "static" typeName() "." "*" ";"
+    }
+
+void typeDeclaration(): {}
+    { classDeclaration()
+    | interfaceDeclaration()
+    }
+
+void annotation(): {}
+    { normalAnnotation()
+    | markerAnnotation()
+    | singleElementAnnotation()
+    }
+
+void normalAnnotation(): {}
+    { "@" typeName() "(" (elementValuePairList())? ")"
+    }
+
+void elementValuePairList(): {}
+    { elementValuePair() ("," elementValuePair())*
+    }
+
+void elementValuePair(): {}
+    { javaIdentifier() "=" elementValue()
+    }
+
+void elementValue(): {}
+    { conditionalExpression()
+    | elementValueArrayInitializer()
+    | annotation()
+    }
+
+void elementValueArrayInitializer(): {}
+    { "{" (elementValueList())? (",")? "}"
+    }
+
+void elementValueList(): {}
+    { elementValue() ("," elementValue())*
+    }
+
+void markerAnnotation(): {}
+    { "@" typeName()
+    }
+
+void singleElementAnnotation(): {}
+    { "@" typeName() "(" elementValue() ")"
+    }
+
+void typeName(): {}
+    { javaIdentifier()
+    | packageOrTypeName() "." javaIdentifier()
+    }
+
+void packageOrTypeName(): {}
+    { javaIdentifier()
+    | packageOrTypeName() "." javaIdentifier()
+    }
+
+void expressionName(): {}
+    { javaIdentifier()
+    | ambiguousName() "." javaIdentifier()
+    }
+
+void methodName(): {}
+    { javaIdentifier()
+    }
+
+void ambiguousName(): {}
+    { javaIdentifier()
+    | ambiguousName() "." javaIdentifier()
+    }
+
+void classDeclaration(): {}
+    { normalClassDeclaration()
+    | enumDeclaration()
+    }
+
+void normalClassDeclaration(): {}
+    { (classModifier())* "class" javaIdentifier() (typeParameters())? (superclass())? (superinterfaces())? classBody()
+    }
+
+void enumDeclaration(): {}
+    { (classModifier())* "enum" javaIdentifier() (superinterfaces())? enumBody()
+    }
+
+void classModifier(): {}
+    { annotation()
+    | "public"
+    | "protected"
+    | "private"
+    | "abstract"
+    | "static"
+    | "final"
+    | "strictfp"
+    }
+
+void interfaceDeclaration(): {}
+    { normalInterfaceDeclaration()
+    | annotationTypeDeclaration()
+    }
+
+void normalInterfaceDeclaration(): {}
+    { (interfaceModifier())* "interface" javaIdentifier() (typeParameters())? (extendsInterfaces())? interfaceBody()
+    }
+
+void interfaceModifier(): {}
+    { annotation()
+    | "public"
+    | "protected"
+    | "private"
+    | "abstract"
+    | "static"
+    | "strictfp"
+    }
+
+void conditionalExpression(): {}
+    { conditionalOrExpression()
+    | conditionalOrExpression() "?" expression() ":" conditionalExpression()
+    | conditionalOrExpression() "?" expression() ":" lambdaExpression()
+    }
+
+void conditionalOrExpression(): {}
+    { conditionalAndExpression()
+    | conditionalOrExpression() "||" conditionalAndExpression()
+    }
+
+void conditionalAndExpression(): {}
+    { inclusiveOrExpression()
+    | conditionalAndExpression() "&&" inclusiveOrExpression()
+    }
+
+void inclusiveOrExpression(): {}
+    { exclusiveOrExpression()
+    | inclusiveOrExpression() "|" exclusiveOrExpression()
+    }
+
+void exclusiveOrExpression(): {}
+    { andExpression()
+    | exclusiveOrExpression() "^" andExpression()
+    }
+
+void andExpression(): {}
+    { equalityExpression()
+    | andExpression() "&" equalityExpression()
+    }
+
+void equalityExpression(): {}
+    { relationalExpression()
+    | equalityExpression() "==" relationalExpression()
+    | equalityExpression() "!=" relationalExpression()
+    }
+
+void relationalExpression(): {}
+    { shiftExpression()
+    | relationalExpression() "<" shiftExpression()
+    | relationalExpression() ">" shiftExpression()
+    | relationalExpression() "<=" shiftExpression()
+    | relationalExpression() ">=" shiftExpression()
+    | relationalExpression() "instanceof" shiftExpression()
+    }
+
+void shiftExpression(): {}
+    { additiveExpression()
+    | shiftExpression() "<<" additiveExpression()
+    | shiftExpression() ">>" additiveExpression()
+    | shiftExpression() ">>>" additiveExpression()
+    }
+
+void additiveExpression(): {}
+    { multiplicativeExpression()
+    | additiveExpression() "+" multiplicativeExpression()
+    | additiveExpression() "-" multiplicativeExpression()
+    }
+
+void multiplicativeExpression(): {}
+    { unaryExpression()
+    | multiplicativeExpression() "*" unaryExpression()
+    | multiplicativeExpression() "/" unaryExpression()
+    | multiplicativeExpression() "%" unaryExpression()
+    }
+
+void unaryExpression(): {}
+    { preIncrementExpression()
+    | preDecrementExpression()
+    | "+" unaryExpression()
+    | "-" unaryExpression()
+    | unaryExpressionNotPlusMinus()
+    }
+
+void preIncrementExpression(): {}
+    { "++" unaryExpression()
+    }
+
+void preDecrementExpression(): {}
+    { "--" unaryExpression()
+    }
+
+void unaryExpressionNotPlusMinus(): {}
+    { postfixExpression()
+    | "~" unaryExpression()
+    | "!" unaryExpression()
+    | castExpression()
+    }
+
+void postfixExpression(): {}
+    { primary()
+    | expressionName()
+    | postIncrementExpression()
+    | postDecrementExpression()
+    }
+
+void primary(): {}
+    { primaryNoNevArray()
+    | arrayCreationExpression()
+    }
+
+void primaryNoNevArray(): {}
+    { literal()
+    | classLiteral()
+    | "this"
+    | typeName() "." "this"
+    | "(" expression() ")"
+    | classInstanceCreationExpression()
+    | fieldAccess()
+    | arrayAccess()
+    | methodInvocation()
+    | methodReference()
+    }
+
+void arrayCreationExpression(): {}
+    { "new" primitiveType() dimExprs() (dims())?
+    | "new" classOrInterfaceType() dimExprs() (dims())?
+    | "new" primitiveType() dims() arrayInitializer()
+    | "new" classOrInterfaceType() dims() arrayInitializer()
+    }
+
+void dimExprs(): {}
+    { dimExpr() (dimExpr())*
+    }
+
+void dimExpr(): {}
+    { (annotation())* "[" expression() "]"
+    }
+
+void dims(): {}
+    { (annotation())* "[" "]" ((annotation())* "[" "]")*
+    }
+
+void arrayInitializer(): {}
+    { "{" (variableInitializerList())? (",")? "}"
+    }
+
+void variableInitializerList(): {}
+    { variableInitializer() ("," variableInitializer())*
+    }
+
+void variableInitializer(): {}
+    { expression()
+    | arrayInitializer()
+    }
+
+void expression(): {}
+    { lambdaExpression()
+    | assignmentExpression()
+    }
+
+void lambdaExpression(): {}
+    { lambdaParameters() "->" lambdaBody()
+    }
+
+void assignmentExpression(): {}
+    { conditionalExpression()
+    | assignment()
+    }
+
+void assignment(): {}
+    { leftHandSide() assignmentOperator() expression()
+    }
+
+void leftHandSide(): {}
+    { expressionName()
+    | fieldAccess()
+    | arrayAccess()
+    }
+
+void assignmentOperator(): {}
+    { "="
+    | "*="
+    | "/="
+    | "%="
+    | "+="
+    | "-="
+    | "<<="
+    | ">>="
+    | ">>>="
+    | "&="
+    | "^="
+    | "|="
+    }
+
+void fieldAccess(): {}
+    { primary() "." javaIdentifier()
+    | "super" "." javaIdentifier()
+    | typeName() "." "super" "." javaIdentifier()
+    }
+
+void arrayAccess(): {}
+    { expressionName() "[" expression() "]"
+    | primaryNoNevArray() "[" expression() "]"
+    }
+
+void lambdaParameters(): {}
+    { javaIdentifier()
+    | "(" (formalParameterList())* ")"
+    | "(" inferredFormalParameterList() ")"
+    }
+
+void inferredFormalParameterList(): {}
+    { javaIdentifier() ("," javaIdentifier())*
+    }
+
+void formalParameterList(): {}
+    { receiverParameter()
+    | formalParameters() "," lastFormalParameter()
+    | lastFormalParameter()
+    }
+
+void formalParameters(): {}
+    { formalParameter() ("," formalParameter())*
+    | receiverParameter() ("," formalParameter())*
+    }
+
+void formalParameter(): {}
+    { (variableModifier())* unannType() variableDeclaratorId()
+    }
+
+void variableModifier(): {}
+    { annotation()
+    | "final"
+    }
+
+void receiverParameter(): {}
+    { (annotation())* unannType() (javaIdentifier() ".")? "this"
+    }
+
+void lastFormalParameter(): {}
+    { (variableModifier())* unannType() (annotation())* "..." variableDeclaratorId()
+    | formalParameter()
+    }
+
+void variableDeclaratorId(): {}
+    { javaIdentifier() (dims())?
+    }
+
+void unannType(): {}
+    { unannPrimitiveType()
+    | unannReferenceType()
+    }
+
+void unannPrimitiveType(): {}
+    { numericType()
+    | "boolean"
+    }
+
+void unannReferenceType(): {}
+    { unannClassOrInterfaceType()
+    | unannTypeVariable()
+    | unannArrayType()
+    }
+
+void unannClassOrInterfaceType(): {}
+    { unannClassType()
+    | unannInterfaceType()
+    }
+
+void unannClassType(): {}
+    { javaIdentifier() (typeArguments())?
+    | unannClassOrInterfaceType() "." (annotation())* javaIdentifier() (typeArguments())?
+    }
+
+void unannInterfaceType(): {}
+    { unannClassType()
+    }
+
+void unannTypeVariable(): {}
+    { javaIdentifier()
+    }
+
+void unannArrayType(): {}
+    { unannPrimitiveType() dims()
+    | unannClassOrInterfaceType() dims()
+    | unannTypeVariable() dims()
+    }
+
+void lambdaBody(): {}
+    { expression()
+    | block()
+    }
+
+void block(): {}
+    { "{" (blockStatements())? "}"
+    }
+
+void blockStatements(): {}
+    { blockStatement() (blockStatement())*
+    }
+
+void blockStatement(): {}
+    { localVariableDeclarationStatement()
+    | classDeclaration()
+    | statement()
+    }
+
+void localVariableDeclarationStatement(): {}
+    { LocalVariableDeclaration() ";"
+    }
+
+void LocalVariableDeclaration(): {}
+    { (variableModifier())* unannType() variableDeclaratorList()
+    }
+
+void variableDeclaratorList(): {}
+    { variableDeclarator() ("," variableDeclarator())*
+    }
+
+void variableDeclarator(): {}
+    { variableDeclaratorId() ("=" variableInitializer())?
+    }
+
+void statement(): {}
+    { statementWithoutTrailingSubstatement()
+    | labeledStatement()
+    | ifThenStatement()
+    | ifThenElseStatement()
+    | whileStatement()
+    | forStatement()
+    }
+
+void statementNoShortIf(): {}
+    { statementWithoutTrailingSubstatement()
+    | labeledStatementNoShortIf()
+    | ifThenElseStatementNoShortIf()
+    | whileStatementNoShortIf()
+    | forStatementNoShortIf()
+    }
+
+void statementWithoutTrailingSubstatement(): {}
+    { block()
+    | emptyStatement()
+    | expressionStatement()
+    | assertStatement()
+    | switchStatement()
+    | doStatement()
+    | breakStatement()
+    | continueStatement()
+    | returnStatement()
+    | synchronizedStatement()
+    | throwStatement()
+    | tryStatement()
+    }
+
+void emptyStatement(): {}
+    { ";"
+    }
+
+void expressionStatement(): {}
+    { statementExpression() ";"
+    }
+
+void statementExpression(): {}
+    { assignment()
+    | preIncrementExpression()
+    | preDecrementExpression()
+    | postIncrementExpression()
+    | postDecrementExpression()
+    | methodInvocation()
+    | classInstanceCreationExpression()
+    }
+
+void classInstanceCreationExpression(): {}
+    { unqualifiedClassInstanceCreationExpression()
+    | expressionName() "." unqualifiedClassInstanceCreationExpression()
+    | primary() "." unqualifiedClassInstanceCreationExpression()
+    }
+
+void unqualifiedClassInstanceCreationExpression(): {}
+    { "new" (typeArguments())? classOrInterfaceTypeToInstantiate() "(" (argumentList())? ")" (classBody())?
+    }
+
+void classOrInterfaceTypeToInstantiate(): {}
+    { (annotation())* javaIdentifier() ("." (annotation())* javaIdentifier())* (typeArgumentsOrDiamond())?
+    }
+
+void typeArgumentsOrDiamond(): {}
+    { typeArguments()
+    | "<>"
+    }
+
+void typeArguments(): {}
+    { "<" typeArgumentList() ">"
+    }
+
+void typeArgumentList(): {}
+    { typeArgument() ("," typeArgument())*
+    }
+
+void typeArgument(): {}
+    { referenceType()
+    | wildcard()
+    }
+
+void wildcard(): {}
+    { (annotation())* "?" (wildcardBounds())?
+    }
+
+void wildcardBounds(): {}
+    { "extends" referenceType()
+    | "super" referenceType()
+    }
+
+void referenceType(): {}
+    { classOrInterfaceType()
+    | typeVariable()
+    | arrayType()
+    }
+
+void classOrInterfaceType(): {}
+    { classType()
+    | interfaceType()
+    }
+
+void classType(): {}
+    { (annotation())* javaIdentifier() (typeArguments())?
+    | classOrInterfaceType() "." (annotation())* javaIdentifier() (typeArguments())?
+    }
+
+void interfaceType(): {}
+    { classType()
+    }
+
+void arrayType(): {}
+    { primitiveType() dims()
+    | classOrInterfaceType() dims()
+    | typeVariable() dims()
+    }
+
+void typeVariable(): {}
+    { (annotation())* javaIdentifier()
+    }
+
+void primitiveType(): {}
+    { (annotation())* numericType()
+    | (annotation())* "boolean"
+    }
+
+void numericType(): {}
+    { integralType()
+    | floatingPointType()
+    }
+
+void integralType(): {}
+    { "byte"
+    | "short"
+    | "int"
+    | "long"
+    | "char"
+    }
+
+void floatingPointType(): {}
+    { "float"
+    | "double"
+    }
+
+void classBody(): {}
+    { "{" (classBodyDeclaration())* "}"
+    }
+
+void classBodyDeclaration(): {}
+    { classMemberDeclaration()
+    | instanceInitializer()
+    | staticInitializer()
+    | constructorDeclaration()
+    }
+
+void classMemberDeclaration(): {}
+    { fieldDeclaration()
+    | methodDeclaration()
+    | classDeclaration()
+    | interfaceDeclaration()
+    }
+
+void fieldDeclaration(): {}
+    { (fieldModifier())* unannType() variableDeclaratorList() ";"
+    }
+
+void fieldModifier(): {}
+    { annotation()
+    | "public"
+    | "protected"
+    | "private"
+    | "static"
+    | "final"
+    | "transient"
+    | "volatile"
+    }
+
+void instanceInitializer(): {}
+    { block()
+    }
+
+void staticInitializer(): {}
+    { "static" block()
+    }
+
+void methodDeclaration(): {}
+    { (methodModifier())* methodHeader() methodBody()
+    }
+
+void methodModifier(): {}
+    { annotation()
+    | "public"
+    | "protected"
+    | "private"
+    | "abstract"
+    | "static"
+    | "final"
+    | "synchronized"
+    | "native"
+    | "strictfp"
+    }
+
+void methodHeader(): {}
+    { result() methodDeclarator() (throws_())?
+    | typeParameters() (annotation())* result() methodDeclarator() (throws_())?
+    }
+
+void result(): {}
+    { unannType()
+    | "void"
+    }
+
+void methodDeclarator(): {}
+    { javaIdentifier() "(" (formalParameterList())? ")" (dims())?
+    }
+
+void throws_(): {}
+    { "throws" exceptionTypeList()
+    }
+
+void exceptionTypeList(): {}
+    { exceptionType() ("," exceptionType())*
+    }
+
+void exceptionType(): {}
+    { classType()
+    | typeVariable()
+    }
+
+void methodBody(): {}
+    { block()
+    | ";"
+    }
+
+void typeParameters(): {}
+    { "<" typeParameterList() ">"
+    }
+
+void typeParameterList(): {}
+    { typeParameter() ("," typeParameter())*
+    }
+
+void typeParameter(): {}
+    { (typeParameterModifier())* javaIdentifier() (typeBound())?
+    }
+
+void typeParameterModifier(): {}
+    { annotation()
+    }
+
+void typeBound(): {}
+    { "extends" typeVariable()
+    | "extends" classOrInterfaceType() (additionalBound())*
+    }
+
+void additionalBound(): {}
+    { "&" interfaceType()
+    }
+
+void constructorDeclaration(): {}
+    { (constructorModifier())* constructorDeclarator() (throws_())? constructorBody()
+    }
+
+void constructorModifier(): {}
+    { annotation()
+    | "public"
+    | "protected"
+    | "private"
+    }
+
+void constructorDeclarator(): {}
+    { (typeParameters())? simpleTypeName() "(" (formalParameterList())? ")"
+    }
+
+void simpleTypeName(): {}
+    { javaIdentifier()
+    }
+
+void constructorBody(): {}
+    { "{" (explicitConstructorInvocation())? (blockStatements())? "}"
+    }
+
+void explicitConstructorInvocation(): {}
+    { (typeArguments())? "this" "(" (argumentList())? ")" ";"
+    | (typeArguments())? "super" "(" (argumentList())? ")" ";"
+    | expressionName() "." (typeArguments())? "super" "(" (argumentList())? ")" ";"
+    | primary() "." (typeArguments())? "super" "(" (argumentList())? ")" ";"
+    }
+
+void argumentList(): {}
+    { expression() ("," expression())*
+    }
+
+void methodInvocation(): {}
+    { methodName() "(" (argumentList())? ")"
+    | typeName() "." (typeArguments())? javaIdentifier() "(" (argumentList())? ")"
+    | expressionName() "." (typeArguments())? javaIdentifier() "(" (argumentList())? ")"
+    | primary() "." (typeArguments())? javaIdentifier() "(" (argumentList())? ")"
+    | "super" "." (typeArguments())? javaIdentifier() "(" (argumentList())? ")"
+    | typeName() "." "super" "." (typeArguments())? javaIdentifier() "(" (argumentList())? ")"
+    }
+
+void postIncrementExpression(): {}
+    { postfixExpression() "++"
+    }
+
+void postDecrementExpression(): {}
+    { postfixExpression() "--"
+    }
+
+void tryStatement(): {}
+    { "try" block() catches()
+    | "try" block() (catches())? finally_()
+    | tryWithResourcesStatement()
+    }
+
+void catches(): {}
+    { catchClause() (catchClause())*
+    }
+
+void catchClause(): {}
+    { "catch" "(" catchFormalParameter() ")" block()
+    }
+
+void catchFormalParameter(): {}
+    { (variableModifier())* catchType() variableDeclaratorId()
+    }
+
+void catchType(): {}
+    { unannClassType() ("|" classType())*
+    }
+
+void finally_(): {}
+    { "finally" block()
+    }
+
+void tryWithResourcesStatement(): {}
+    { "try" resourceSpecification() block() (catches())? (finally_())?
+    }
+
+void resourceSpecification(): {}
+    { "(" resourceList() (";")? ")"
+    }
+
+void resourceList(): {}
+    { resource() (";" resource())*
+    }
+
+void resource(): {}
+    { (variableModifier())* unannType() variableDeclaratorId() "=" expression()
+    }
+
+void throwStatement(): {}
+    { "throw" expression() ";"
+    }
+
+void synchronizedStatement(): {}
+    { "synchronized" "(" expression() ")" block()
+    }
+
+void returnStatement(): {}
+    { "return" (expression())? ";"
+    }
+
+void continueStatement(): {}
+    { "continue" (javaIdentifier())? ";"
+    }
+
+void breakStatement(): {}
+    { "break" (javaIdentifier())? ";"
+    }
+
+void doStatement(): {}
+    { "do" statement() "while" "(" expression() ")" ";"
+    }
+
+void forStatement(): {}
+    { basicForStatement()
+    | enhancedForStatement()
+    }
+
+void forStatementNoShortIf(): {}
+    { basicForStatementNoShortIf()
+    | enhancedForStatementNoShortIf()
+    }
+
+void basicForStatement(): {}
+    { "for" "(" (forInit())? ";" (expression())? ";" (forUpdate())? ")" statement()
+    }
+
+void basicForStatementNoShortIf(): {}
+    { "for" "(" (forInit())? ";" (expression())? ";" (forUpdate())? ")" statementNoShortIf()
+    }
+
+void forInit(): {}
+    { statementExpressionList()
+    | localVariableDeclaration()
+    }
+
+void forUpdate(): {}
+    { statementExpressionList()
+    }
+
+void statementExpressionList(): {}
+    { statementExpression() ("," statementExpression())*
+    }
+
+void enhancedForStatement(): {}
+    { "for" "(" (variableModifier())* unannType() variableDeclaratorId() ":" expression() ")" statement()
+    }
+
+void enhancedForStatementNoShortIf(): {}
+    { "for" "(" (variableModifier())* unannType() variableDeclaratorId() ":" expression() ")" statementNoShortIf()
+    }
+
+void localVariableDeclaration(): {}
+    { (variableModifier())* unannType() variableDeclaratorList()
+    }
+
+void switchStatement(): {}
+    { "switch" "(" expression() ")" switchBlock()
+    }
+
+void switchBlock(): {}
+    { "{" (switchBlockStatementGroup())* (switchLabel())* "}"
+    }
+
+void switchBlockStatementGroup(): {}
+    { switchLabels() blockStatements()
+    }
+
+void switchLabels(): {}
+    { switchLabel() (switchLabel())*
+    }
+
+void switchLabel(): {}
+    { "case" constantExpression() ":"
+    | "case" enumConstantName() ":"
+    | "default" ":"
+    }
+
+void enumConstantName(): {}
+    { javaIdentifier()
+    }
+
+void whileStatement(): {}
+    { "while" "(" expression() ")" statement()
+    }
+
+void whileStatementNoShortIf(): {}
+    { "while" "(" expression() ")" statementNoShortIf()
+    }
+
+void ifThenStatement(): {}
+    { "if" "(" expression() ")" statement()
+    }
+
+void ifThenElseStatement(): {}
+    { "if" "(" expression() ")" statementNoShortIf() "else" statement()
+    }
+
+void ifThenElseStatementNoShortIf(): {}
+    { "if" "(" expression() ")" statementNoShortIf() "else" statementNoShortIf()
+    }
+
+void assertStatement(): {}
+    { "assert" expression() ";"
+    | "assert" expression() ":" expression() ";"
+    }
+
+void constantExpression(): {}
+    { expression()
+    }
+
+void labeledStatement(): {}
+    { javaIdentifier() ":" statement()
+    }
+
+void labeledStatementNoShortIf(): {}
+    { javaIdentifier() ":" statementNoShortIf()
+    }
+
+void methodReference(): {}
+    { expressionName() "::" (typeArguments())? javaIdentifier()
+    | referenceType() "::" (typeArguments())? javaIdentifier()
+    | primary() "::" (typeArguments())? javaIdentifier()
+    | "super" "::" (typeArguments())? javaIdentifier()
+    | typeName() "." "super" "::" (typeArguments())? javaIdentifier()
+    | classType() "::" (typeArguments())? "new"
+    | arrayType() "::" "new"
+    }
+
+void classLiteral(): {}
+    { typeName() ("[" "]")* "." "class"
+    | numericType() ("[" "]")* "." "class"
+    | "boolean" ("[" "]")* "." "class"
+    | "void" ("[" "]")* "." "class"
+    }
+
+void literal(): {}
+    { integerLiteral()
+    | floatingPointLiteral()
+    | booleanLiteral()
+    | characterLiteral()
+    | stringLiteral()
+    | nullLiteral()
+    }
+
+void castExpression(): {}
+    { "(" primitiveType() ")" unaryExpression()
+    | "(" referenceType() (additionalBound())* unaryExpressionNotPlusMinus()
+    | "(" referenceType() (additionalBound())* lambdaExpression()
+    }
+
+void interfaceBody(): {}
+    { "{" (interfaceMemberDeclaration())* "}"
+    }
+
+void interfaceMemberDeclaration(): {}
+    { constantDeclaration()
+    | interfaceMethodDeclaration()
+    | classDeclaration()
+    | interfaceDeclaration()
+    }
+
+void extendsInterfaces(): {}
+    { "extends" interfaceTypeList()
+    }
+
+void annotationTypeDeclaration(): {}
+    { (interfaceModifier())* "@" "interface" javaIdentifier() annotationTypeBody()
+    }
+
+void enumBody(): {}
+    { "{" (enumConstantList())? (",")? (enumBodyDeclarations())? "}"
+    }
+
+void enumConstantList(): {}
+    { enumConstant() ("," enumConstant())*
+    }
+
+void enumConstant(): {}
+    { (enumConstantModifier())* javaIdentifier() ("(" (argumentList())? ")")? (classBody())?
+    }
+
+void enumConstantModifier(): {}
+    { annotation()
+    }
+
+void enumBodyDeclarations(): {}
+    { ";" (classBodyDeclaration())*
+    }
+
+void superclass(): {}
+    { "extends" classType()
+    }
+
+void superinterfaces(): {}
+    { "implements" interfaceTypeList()
+    }
+
+void interfaceTypeList(): {}
+    { interfaceType() ("," interfaceType())*
+    }
+
+void annotationTypeBody(): {}
+    { "{" (annotationTypeMemberDeclaration())* "}"
+    }
+
+void annotationTypeMemberDeclaration(): {}
+    { annotationTypeElementDeclaration()
+    | constantDeclaration()
+    | classDeclaration()
+    | interfaceDeclaration()
+    | ";"
+    }
+
+void annotationTypeElementDeclaration(): {}
+    { (annotationTypeElementModifier())* unannType() javaIdentifier() "(" ")" (dims())? (defaultValue())? ";"
+    }
+
+void annotationTypeElementModifier(): {}
+    { annotation()
+    | "public"
+    | "abstract"
+    }
+
+void defaultValue(): {}
+    { "default" elementValue()
+    }
+
+void constantDeclaration(): {}
+    { (constantModifier())* unannType() variableDeclaratorList() ";"
+    }
+
+void constantModifier(): {}
+    { annotation()
+    | "public"
+    | "static"
+    | "final"
+    }
+
+void interfaceMethodDeclaration(): {}
+    { (interfaceMethodModifier())* methodHeader() methodBody()
+    }
+
+void interfaceMethodModifier(): {}
+    { annotation()
+    | "public"
+    | "abstract"
+    | "default"
+    | "static"
+    | "strictfp"
+    }
+
+void integerLiteral(): {}
+    { decimalIntegerLiteral()
+    | hexIntegerLiteral()
+    | octalIntegerLiteral()
+    | binaryIntegerLiteral()
+    }
+
+void decimalIntegerLiteral(): {}
+    { decimalNumeral() (integerTypeSuffix())?
+    }
+
+void hexIntegerLiteral(): {}
+    { hexNumeral() (integerTypeSuffix())?
+    }
+
+void octalIntegerLiteral(): {}
+    { octalNumeral() (integerTypeSuffix())?
+    }
+
+void binaryIntegerLiteral(): {}
+    { binaryNumeral() (integerTypeSuffix())?
+    }
+
+void integerTypeSuffix(): {}
+    { "l"
+    | "L"
+    }
+
+void decimalNumeral(): {}
+    { "0"
+    | nonZeroDigit() (digits())?
+    | nonZeroDigit() underscores() digits()
+    }
+
+void nonZeroDigit(): {}
+    { "1"
+    | "2"
+    | "3"
+    | "4"
+    | "5"
+    | "6"
+    | "7"
+    | "8"
+    | "9"
+    }
+
+void digits(): {}
+    { digit()
+    | digit() (digitsAndUnderscores())? digit()
+    }
+
+void digit(): {}
+    { "0"
+    | nonZeroDigit()
+    }
+
+void digitsAndUnderscores(): {}
+    { digitOrUnderscore() (digitOrUnderscore())*
+    }
+
+void digitOrUnderscore(): {}
+    { digit()
+    | "_"
+    }
+
+void underscores(): {}
+    { "_" ("_")*
+    }
+
+void hexNumeral(): {}
+    { "0" "x" hexDigits()
+    | "0" "X" hexDigits()
+    }
+
+void hexDigits(): {}
+    { hexDigit()
+    | hexDigit() (hexDigitsAndUnderscores())? hexDigit()
+    }
+
+void hexDigit(): {}
+    { "0"
+    | "1"
+    | "2"
+    | "3"
+    | "4"
+    | "5"
+    | "6"
+    | "7"
+    | "8"
+    | "9"
+    | "a"
+    | "b"
+    | "c"
+    | "d"
+    | "e"
+    | "f"
+    | "A"
+    | "B"
+    | "C"
+    | "D"
+    | "E"
+    | "F"
+    }
+
+void hexDigitsAndUnderscores(): {}
+    { hexDigitOrUnderscore() (hexDigitOrUnderscore())*
+    }
+
+void hexDigitOrUnderscore(): {}
+    { hexDigit()
+    | "_"
+    }
+
+void octalNumeral(): {}
+    { "0" octalDigits()
+    | "0" underscores() octalDigits()
+    }
+
+void octalDigits(): {}
+    { octalDigit()
+    | octalDigit() (octalDigitsAndUnderscores())? octalDigit()
+    }
+
+void octalDigit(): {}
+    { "0"
+    | "1"
+    | "2"
+    | "3"
+    | "4"
+    | "5"
+    | "6"
+    | "7"
+    }
+
+void octalDigitsAndUnderscores(): {}
+    { octalDigitOrUnderscore() (octalDigitOrUnderscore())*
+    }
+
+void octalDigitOrUnderscore(): {}
+    { octalDigit()
+    | "_"
+    }
+
+void binaryNumeral(): {}
+    { "0" "b" binaryDigits()
+    | "0" "B" binaryDigits()
+    }
+
+void binaryDigits(): {}
+    { binaryDigit()
+    | binaryDigit() (binaryDigitsAndUnderscores())? binaryDigit()
+    }
+
+void binaryDigit(): {}
+    { "0"
+    | "1"
+    }
+
+void binaryDigitsAndUnderscores(): {}
+    { binaryDigitOrUnderscore() (binaryDigitOrUnderscore())*
+    }
+
+void binaryDigitOrUnderscore(): {}
+    { binaryDigit()
+    | "_"
+    }
+
+void floatingPointLiteral(): {}
+    { decimalFloatingPointLiteral()
+    | hexadecimalFloatingPointLiteral()
+    }
+
+void decimalFloatingPointLiteral(): {}
+    { digits() "." (digits())? (exponentPart())? (floatingTypeSuffix())?
+    | "." digits() (exponentPart())? (floatingTypeSuffix())?
+    | digits() exponentPart() (floatingTypeSuffix())?
+    | digits() (exponentPart())? floatingTypeSuffix()
+    }
+
+void exponentPart(): {}
+    { exponentIndicator() signedInteger()
+    }
+
+void exponentIndicator(): {}
+    { "e"
+    | "E"
+    }
+
+void signedInteger(): {}
+    { (sign())? digits()
+    }
+
+void sign(): {}
+    { "+"
+    | "-"
+    }
+
+void floatingTypeSuffix(): {}
+    { "f"
+    | "F"
+    | "d"
+    | "D"
+    }
+
+void hexadecimalFloatingPointLiteral(): {}
+    { hexSignificand() binaryExponent() (floatingTypeSuffix())?
+    }
+
+void hexSignificand(): {}
+    { hexNumeral() (".")?
+    | "0" "x" (hexDigits()) "." hexDigits()
+    | "0" "X" (hexDigits()) "." hexDigits()
+    }
+
+void binaryExponent(): {}
+    { binaryExponentIndicator() signedInteger()
+    }
+
+void binaryExponentIndicator(): {}
+    { "p"
+    | "P"
+    }
+
+void booleanLiteral(): {}
+    { "true"
+    | "false"
+    }
+
+void characterLiteral(): {}
+    { "'" singleCharacter() "'"
+    | "'" escapeCharacter() "'"
+    }
+
+void singleCharacter(): {}
+    { <~["'", "\\"]>
+    }
+
+void escapeCharacter(): {}
+    { "\\" "b"
+    | "\\" "t"
+    | "\\" "n"
+    | "\\" "f"
+    | "\\" "r"
+    | "\\" "\""
+    | "\\" "'"
+    | "\\" "\\"
+    | octalEscape()
+    }
+
+void octalEscape(): {}
+    { "\\" octalDigit()
+    | "\\" octalDigit() octalDigit()
+    | "\\" zeroToThree() octalDigit() octalDigit()
+    }
+
+void zeroToThree(): {}
+    { "0"
+    | "1"
+    | "2"
+    | "3"
+    }
+
+void stringLiteral(): {}
+    { "\"" (stringCharacter())* "\""
+    }
+
+void stringCharacter(): {}
+    { <~["\"", "\\"]>
+    | escapeSequence()
+    }
+
+void escapeSequence(): {}
+    { escapeCharacter()
+    }
+
+void nullLiteral(): {}
+    { "null"
+    }

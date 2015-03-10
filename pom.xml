@@ -86,6 +86,27 @@
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.5.1</version>
             </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>javacc-maven-plugin</artifactId>
+                <version>2.6</version>
+
+                <configuration>
+                    <jdkVersion>1.6</jdkVersion>
+                    <outputDirectory>src/main/java/</outputDirectory>
+                    <isStatic>false</isStatic>
+                </configuration>
+
+                <executions>
+                    <execution>
+                        <id>javacc</id>
+                        <goals>
+                            <goal>javacc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
