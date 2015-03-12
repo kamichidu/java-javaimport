@@ -208,7 +208,7 @@ void exclusiveOrExpression(): {}
 
 void andExpression(): {}
     { equalityExpression()
-    | andExpression() "&" equalityExpression()
+    | equalityExpression() "&" andExpression()
     }
 
 void equalityExpression(): {}
