@@ -134,8 +134,7 @@ void methodName(): {}
     }
 
 void ambiguousName(): {}
-    { javaIdentifier()
-    | ambiguousName() "." javaIdentifier()
+    { javaIdentifier() ("." javaIdentifier())*
     }
 
 void classDeclaration(): {}
