@@ -121,8 +121,7 @@ void typeName(): {}
     }
 
 void packageOrTypeName(): {}
-    { javaIdentifier()
-    | packageOrTypeName() "." javaIdentifier()
+    { javaIdentifier() ("." javaIdentifier())*
     }
 
 void expressionName(): {}
