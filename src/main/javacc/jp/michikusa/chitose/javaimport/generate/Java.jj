@@ -198,7 +198,7 @@ void conditionalAndExpression(): {}
 
 void inclusiveOrExpression(): {}
     { exclusiveOrExpression()
-    | inclusiveOrExpression() "|" exclusiveOrExpression()
+    | exclusiveOrExpression() "|" inclusiveOrExpression()
     }
 
 void exclusiveOrExpression(): {}
