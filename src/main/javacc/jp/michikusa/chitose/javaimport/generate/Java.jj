@@ -797,11 +797,15 @@ void methodInvocation(): {}
     }
 
 void postIncrementExpression(): {}
-    { postfixExpression() "++"
+    { (primary() "++")+
+    | (expressionName() "++")+
+    | (((primary() | expressionName()) "--")+ "++")+
     }
 
 void postDecrementExpression(): {}
-    { postfixExpression() "--"
+    { (primary() "--")+
+    | (expressionName() "--")+
+    | (((primary() | expressionName()) "++")+ "--")+
     }
 
 void tryStatement(): {}
