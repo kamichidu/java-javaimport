@@ -235,8 +235,8 @@ void shiftExpression(): {}
 
 void additiveExpression(): {}
     { multiplicativeExpression()
-    | additiveExpression() "+" multiplicativeExpression()
-    | additiveExpression() "-" multiplicativeExpression()
+    | multiplicativeExpression() "+" additiveExpression()
+    | multiplicativeExpression() "-" additiveExpression()
     }
 
 void multiplicativeExpression(): {}
