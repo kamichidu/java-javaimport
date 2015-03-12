@@ -228,9 +228,9 @@ void relationalExpression(): {}
 
 void shiftExpression(): {}
     { additiveExpression()
-    | shiftExpression() "<<" additiveExpression()
-    | shiftExpression() ">>" additiveExpression()
-    | shiftExpression() ">>>" additiveExpression()
+    | additiveExpression() "<<" shiftExpression()
+    | additiveExpression() ">>" shiftExpression()
+    | additiveExpression() ">>>" shiftExpression()
     }
 
 void additiveExpression(): {}
