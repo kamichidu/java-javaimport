@@ -219,11 +219,11 @@ void equalityExpression(): {}
 
 void relationalExpression(): {}
     { shiftExpression()
-    | relationalExpression() "<" shiftExpression()
-    | relationalExpression() ">" shiftExpression()
-    | relationalExpression() "<=" shiftExpression()
-    | relationalExpression() ">=" shiftExpression()
-    | relationalExpression() "instanceof" shiftExpression()
+    | shiftExpression() "<" relationalExpression()
+    | shiftExpression() ">" relationalExpression()
+    | shiftExpression() "<=" relationalExpression()
+    | shiftExpression() ">=" relationalExpression()
+    | shiftExpression() "instanceof" relationalExpression()
     }
 
 void shiftExpression(): {}
