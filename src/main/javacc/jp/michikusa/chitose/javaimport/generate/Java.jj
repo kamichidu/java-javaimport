@@ -597,8 +597,7 @@ void classOrInterfaceType(): {}
     }
 
 void classType(): {}
-    { (annotation())* javaIdentifier() (typeArguments())?
-    | classOrInterfaceType() "." (annotation())* javaIdentifier() (typeArguments())?
+    { ((annotation())* javaIdentifier() (typeArguments())? ".")* (annotation())* javaIdentifier() (typeArguments())?
     }
 
 void interfaceType(): {}
