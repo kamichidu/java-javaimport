@@ -442,7 +442,7 @@ void unannClassOrInterfaceType(): {}
 
 void unannClassType(): {}
     { javaIdentifier() (typeArguments())?
-    | unannClassOrInterfaceType() "." (annotation())* javaIdentifier() (typeArguments())?
+    | ((annotation())* javaIdentifier() (typeArguments())? ".")* (annotation())* javaIdentifier() (typeArguments())?
     }
 
 void unannInterfaceType(): {}
