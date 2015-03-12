@@ -213,8 +213,8 @@ void andExpression(): {}
 
 void equalityExpression(): {}
     { relationalExpression()
-    | equalityExpression() "==" relationalExpression()
-    | equalityExpression() "!=" relationalExpression()
+    | relationalExpression() "==" equalityExpression()
+    | relationalExpression() "!=" equalityExpression()
     }
 
 void relationalExpression(): {}
