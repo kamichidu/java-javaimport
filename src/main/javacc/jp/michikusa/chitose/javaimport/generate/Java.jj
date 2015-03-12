@@ -241,9 +241,9 @@ void additiveExpression(): {}
 
 void multiplicativeExpression(): {}
     { unaryExpression()
-    | multiplicativeExpression() "*" unaryExpression()
-    | multiplicativeExpression() "/" unaryExpression()
-    | multiplicativeExpression() "%" unaryExpression()
+    | unaryExpression() "*" multiplicativeExpression()
+    | unaryExpression() "/" multiplicativeExpression()
+    | unaryExpression() "%" multiplicativeExpression()
     }
 
 void unaryExpression(): {}
