@@ -193,7 +193,7 @@ void conditionalOrExpression(): {}
 
 void conditionalAndExpression(): {}
     { inclusiveOrExpression()
-    | conditionalAndExpression() "&&" inclusiveOrExpression()
+    | inclusiveOrExpression() "&&" conditionalAndExpression()
     }
 
 void inclusiveOrExpression(): {}
