@@ -188,7 +188,7 @@ void conditionalExpression(): {}
 
 void conditionalOrExpression(): {}
     { conditionalAndExpression()
-    | conditionalOrExpression() "||" conditionalAndExpression()
+    | conditionalAndExpression() "||" conditionalOrExpression()
     }
 
 void conditionalAndExpression(): {}
